@@ -1,0 +1,82 @@
+[
+  {
+    "id": "takaosanguchi-station",
+    "title": "高尾山口駅",
+    "lat": 35.6324,
+    "lng": 139.2696,
+    "radius": 60,
+    "audio": "assets/audio/spot/001_波音リツ（ノーマル）_ここは高尾山口駅です.mp3"
+  },
+  {
+    "id": "kiyotaki-station",
+    "title": "清滝駅",
+    "lat": 35.6311,
+    "lng": 139.2662,
+    "radius": 50,
+    "audio": "assets/audio/spot/001_波音リツ（ノーマル）_ここは清滝駅です.mp3"
+  },
+  {
+    "id": "spot-1781515714453",
+    "title": "ここは行船公園の入り口です",
+    "lat": 35.672032,
+    "lng": 139.860691,
+    "radius": 20,
+    "audio": "assets/audio/spot/001_波音リツ（ノーマル）_ここはぎょうせん公….mp3"
+  },
+  {
+    "id": "spot-1781532415502",
+    "title": "駿河台キャンパス",
+    "lat": 35.697386,
+    "lng": 139.761795,
+    "radius": 40,
+    "audio": "assets/audio/spot/001_No.7（ノーマル）_ここが駿河台キャン….mp3"
+  },
+  {
+    "id": "spot-1781532491459",
+    "title": "神保町駅",
+    "lat": 35.695957,
+    "lng": 139.758609,
+    "radius": 40,
+    "audio": "assets/audio/spot/004_No.7（ノーマル）_ここが神保町駅だよ….mp3"
+  },
+  {
+    "id": "spot-1781532546898",
+    "title": "神保町駅分かれ道",
+    "lat": 35.696081,
+    "lng": 139.760492,
+    "radius": 40,
+    "audio": "assets/audio/spot/003_No.7（ノーマル）_分かれ道だね。どっ….mp3"
+  },
+  {
+    "id": "spot-1781532565367",
+    "title": "もうすぐ駿河台キャンパス",
+    "lat": 35.696576,
+    "lng": 139.761626,
+    "radius": 40,
+    "audio": "assets/audio/spot/002_No.7（ノーマル）_目の前に大きな建物….mp3"
+  },
+  {
+    "id": "spot-1781532826590",
+    "title": "ABCマート",
+    "lat": 35.695328,
+    "lng": 139.761211,
+    "radius": 40,
+    "audio": "assets/audio/spot/005_No.7（ノーマル）_ABCマートが見え….mp3"
+  },
+  {
+    "id": "spot-1781532884030",
+    "title": "橋の前",
+    "lat": 35.690973,
+    "lng": 139.760851,
+    "radius": 40,
+    "audio": "assets/audio/spot/007_No.7（ノーマル）_橋が架かってるね。….mp3"
+  },
+  {
+    "id": "spot-1781533899973",
+    "title": "竹橋駿河台中韓",
+    "lat": 35.693857,
+    "lng": 139.7612,
+    "radius": 40,
+    "audio": "assets/audio/spot/006_No.7（ノーマル）_こっちの道で間違い….mp3"
+  }
+]
