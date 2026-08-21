@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Takaostep Locatone Prototype</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f766e'/%3E%3Ccircle cx='32' cy='24' r='10' fill='white'/%3E%3Cpath d='M32 56c9-12 18-24 18-34A18 18 0 0 0 14 22c0 10 9 22 18 34z' fill='white' fill-opacity='.9'/%3E%3Ccircle cx='32' cy='22' r='6' fill='%230f766e'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ0K8kNQqldqUXjH7VToGVt3BU6eA=" crossorigin="">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="map-stage" aria-label="音声スポット地図">
+        <div id="map" class="map-view"></div>
+        <button id="locateButton" class="map-locate-button" type="button" aria-label="現在地へ移動" title="現在地へ移動">◎</button>
+      </section>
+
+      <aside class="control-panel" aria-label="音声スポット操作">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Location Audio Guide</p>
+            <h1>高尾ステップ</h1>
+          </div>
+          <span id="watchBadge" class="badge">停止中</span>
+        </div>
+
+        <div class="status-card">
+          <div>
+            <span class="label">現在地</span>
+            <strong id="positionText">未取得</strong>
+          </div>
+          <div>
+            <span class="label">精度</span>
+            <strong id="accuracyText">-</strong>
+          </div>
+        </div>
+
+        <div class="button-row">
+          <button id="startButton" class="primary-button" type="button">開始</button>
+          <button id="stopButton" class="icon-button" type="button" aria-label="停止" title="停止">■</button>
+        </div>
+
+        <section class="bgm-panel" aria-label="BGM設定">
+          <div class="bgm-header">
+            <h2>BGM</h2>
+            <span id="bgmStatus" class="small-status">未再生</span>
+          </div>
+          <label>
+            <span>音量</span>
+            <input id="bgmVolume" type="range" min="0" max="1" step="0.05" value="0.35">
+          </label>
+        </section>
+
+        <label class="debug-toggle">
+          <input id="debugMoveToggle" type="checkbox">
+          <span>地図クリックで現在地を移動</span>
+        </label>
+
+        <form id="spotForm" class="spot-form">
+          <div class="form-grid">
+            <label>
+              <span>タイトル</span>
+              <input id="spotTitle" name="title" type="text" value="新しい音声スポット" required>
+            </label>
+            <label>
+              <span>半径 m</span>
+              <input id="spotRadius" name="radius" type="number" min="5" max="500" step="5" value="40" required>
+            </label>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              <span>緯度</span>
+              <input id="spotLat" name="lat" type="number" step="0.000001" required>
+            </label>
+            <label>
+              <span>経度</span>
+              <input id="spotLng" name="lng" type="number" step="0.000001" required>
+            </label>
+          </div>
+
+          <label>
+            <span>MP3 URL / パス</span>
+            <input id="spotAudio" name="audio" type="text" placeholder="audio/guide-01.mp3">
+          </label>
+
+          <label>
+            <span>MP3 ファイル</span>
+            <input id="spotFile" name="file" type="file" accept="audio/mpeg,audio/mp3,audio/*">
+          </label>
+
+          <div class="button-row">
+            <button class="secondary-button" id="useCurrentButton" type="button">現在地を使う</button>
+            <button class="primary-button" type="submit">スポット追加</button>
+          </div>
+        </form>
+
+        <div class="spots-header">
+          <h2>音声スポット</h2>
+          <div class="spots-actions">
+            <button id="exportButton" class="text-button" type="button">JSON出力</button>
+            <button id="resetButton" class="text-button" type="button">リセット</button>
+          </div>
+        </div>
+        <ol id="spotsList" class="spots-list"></ol>
+      </aside>
+    </main>
+
+    <template id="spotItemTemplate">
+      <li class="spot-item">
+        <button class="spot-main" type="button">
+          <span class="spot-title"></span>
+          <span class="spot-meta"></span>
+        </button>
+        <button class="spot-play" type="button" aria-label="音声を試聴" title="音声を試聴">▶</button>
+      </li>
+    </template>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+  </body>
+</html>

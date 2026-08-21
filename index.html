@@ -1,122 +1,83 @@
 <!doctype html>
 <html lang="ja">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Takaostep Locatone Prototype</title>
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230f766e'/%3E%3Ccircle cx='32' cy='24' r='10' fill='white'/%3E%3Cpath d='M32 56c9-12 18-24 18-34A18 18 0 0 0 14 22c0 10 9 22 18 34z' fill='white' fill-opacity='.9'/%3E%3Ccircle cx='32' cy='22' r='6' fill='%230f766e'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQ0K8kNQqldqUXjH7VToGVt3BU6eA=" crossorigin="">
-    <link rel="stylesheet" href="style.css">
-  </head>
-  <body>
-    <main class="app-shell">
-      <section class="map-stage" aria-label="音声スポット地図">
-        <div id="map" class="map-view"></div>
-        <button id="locateButton" class="map-locate-button" type="button" aria-label="現在地へ移動" title="現在地へ移動">◎</button>
-      </section>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="星庭 — 星ふる高尾の夜の旅。高尾駒木野庭園で開催する夜空ライトアップイベント。">
+  <title>星庭 | 星ふる高尾の夜の旅</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{background:linear-gradient(rgba(3,13,38,.78),rgba(3,13,38,.88)),url("assets/img/garden_background.png") center/cover fixed no-repeat}
+    .hero,.section,.mystery-banner,.experience,.illumination,.cafe,.garden-card,.workshop,.access,.socials{background:transparent!important}
+    .hero:after{opacity:.12}
+    .experience-grid a,.detail-panel,.card-pair article{background:rgba(10,33,74,.58)}
+    .illumination-grid article{background:rgba(16,41,87,.58)}
+    .cafe-images div{background:rgba(6,20,55,.38)}
+    .section-heading,.intro-copy,.map-section .section-heading,.workshop>div:first-child,.access .section-heading{text-align:center}
+    .intro,.map-section,.workshop,.access{justify-items:center}
+    .intro-copy>p,.section-heading>p:not(.eyebrow),.workshop p:not(.eyebrow){margin-left:auto;margin-right:auto}
+    .facts{width:100%;text-align:center}
+    .mystery-banner{text-align:center;justify-content:center}
+    .mystery-banner>div{margin:0;max-width:760px}
+    .mystery-banner .button{margin:0}
+    .detail-panel{width:100%;max-width:420px;text-align:center}
+    .access-price{margin-left:auto;margin-right:auto}
+    .access-price:after{content:"※イベント期間以外は入園無料";display:block;margin-top:10px;color:var(--muted);font-size:11px}
+    .facts:after{content:"※イベント期間以外は入園無料";grid-column:1/-1;padding-top:14px;color:var(--muted);font-size:11px}
+    .intro,.map-section{display:block}
+    .intro-copy{max-width:760px;margin:36px auto 0}
+    .map-section>img{display:block;margin:38px auto 0;max-width:var(--max)}
+    .mystery-banner{display:block}
+    .mystery-banner>div{margin:0 auto;max-width:760px}
+    .mystery-banner .button{display:flex;width:max-content;margin:25px auto 0}
+    .cafe .text-link{display:flex;width:max-content;margin:30px auto 0;padding:11px 24px;border:1px solid var(--gold);background:var(--gold);color:var(--navy);font-weight:bold;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.24);transition:transform .2s,box-shadow .2s}
+    .cafe .text-link:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.36)}
+    .mystery-banner .button-outline{border:1px solid var(--gold);background:var(--gold);color:var(--navy);box-shadow:0 8px 24px rgba(0,0,0,.24)}
+    .mystery-banner .button-outline:hover{box-shadow:0 12px 28px rgba(0,0,0,.36)}
+    .section,.mystery-banner{border-top:0!important;border-bottom:0!important}
+    .experience-grid a:nth-child(1){order:1}.experience-grid a:nth-child(3){order:2}.experience-grid a:nth-child(4){order:3}.experience-grid a:nth-child(2){order:4}
+    .illumination-grid .moon-shape,.illumination-grid .water-lines{inset:0;width:auto;height:auto;left:0;bottom:0;border-radius:0;opacity:.62;background-position:center;background-size:cover;box-shadow:none}
+    .illumination-grid .moon-shape{background-image:linear-gradient(rgba(5,18,48,.22),rgba(5,18,48,.55)),url("assets/img/garden_lightup_karesansui.png")}
+    .illumination-grid .water-lines{background-image:linear-gradient(rgba(5,18,48,.22),rgba(5,18,48,.55)),url("assets/img/garden_lightup_pond.png")}
+    .detail-panel a{display:block;width:max-content;margin:16px auto 0;padding:11px 24px;background:var(--gold);color:var(--navy);font-weight:bold;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.24);transition:transform .2s,box-shadow .2s}
+    .detail-panel a:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.36)}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top"><span>星</span>庭</a>
+    <button class="menu-toggle" aria-label="メニューを開く" aria-expanded="false">☰</button>
+    <nav class="site-nav"><a href="#about">イベント概要</a><a href="#experience">体験</a><a href="#access">アクセス</a></nav>
+  </header>
 
-      <aside class="control-panel" aria-label="音声スポット操作">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">Location Audio Guide</p>
-            <h1>高尾ステップ</h1>
-          </div>
-          <span id="watchBadge" class="badge">停止中</span>
-        </div>
+  <main id="top">
+    <section class="hero">
+      <div class="star-field" aria-hidden="true"></div><div class="hero-halo" aria-hidden="true"></div>
+      <div class="hero-inner reveal"><p class="eyebrow">明治大学 奥山ゼミ × ヨークゼミ 主催</p><p class="hero-kicker">高尾駒木野庭園 星空ライトアップイベント</p><h1><span>星</span><span>庭</span></h1><p class="tagline">星ふる高尾の夜の旅</p><div class="date"><b>10/23</b><i>金</i><em>・</em><b>24</b><i>土</i></div><p class="time">17:30 — 20:30 <small>（最終入場 20:00）</small></p><a class="button button-gold" href="#access">会場・入場料を見る <span>↓</span></a></div>
+      <a class="scroll-cue" href="#about">SCROLL <span></span></a>
+    </section>
 
-        <div class="status-card">
-          <div>
-            <span class="label">現在地</span>
-            <strong id="positionText">未取得</strong>
-          </div>
-          <div>
-            <span class="label">精度</span>
-            <strong id="accuracyText">-</strong>
-          </div>
-        </div>
+    <section class="section intro reveal" id="about"><div class="section-heading"><p class="eyebrow">ABOUT THE EVENT</p><h2>高尾の夜に、<br><em>星の庭</em>をひらきます。</h2></div><div class="intro-copy"><p>高尾駒木野庭園を舞台に、夜の庭をゆっくり歩く特別な2日間。光と音、香りと味覚が重なり合う、ここだけの夜旅へお越しください。</p><div class="facts"><div><small>会場</small><strong>高尾駒木野庭園</strong></div><div><small>入場料</small><strong>一般 500円<br>中学生 300円 / 小学生以下無料</strong></div><div><small>開催日</small><strong>10月23日（金）・24日（土）</strong></div></div></div></section>
 
-        <div class="button-row">
-          <button id="startButton" class="primary-button" type="button">開始</button>
-          <button id="stopButton" class="icon-button" type="button" aria-label="停止" title="停止">■</button>
-        </div>
+    <section class="mystery-banner reveal"><div><p class="eyebrow">NIGHT WALK</p><h2>夜の庭へ向かう体験</h2><p>高尾山口駅から庭園まで、まちの風景を楽しみながら謎を解く夜の道のり。庭園へ向かう時間から、星庭の物語が始まります。</p></div><a class="button button-outline" href="mystery/">まちあるき謎解きへ <span>↗</span></a></section>
 
-        <section class="bgm-panel" aria-label="BGM設定">
-          <div class="bgm-header">
-            <h2>BGM</h2>
-            <span id="bgmStatus" class="small-status">未再生</span>
-          </div>
-          <label>
-            <span>音量</span>
-            <input id="bgmVolume" type="range" min="0" max="1" step="0.05" value="0.35">
-          </label>
-        </section>
+    <section class="section map-section reveal" aria-labelledby="map-title"><div class="section-heading"><p class="eyebrow">GARDEN MAP</p><h2 id="map-title">会場案内</h2><p>高尾駒木野庭園で、星ふる夜の旅をお楽しみください。</p></div><img src="assets/img/garden_map.png" alt="高尾駒木野庭園の会場マップ"></section>
 
-        <label class="debug-toggle">
-          <input id="debugMoveToggle" type="checkbox">
-          <span>地図クリックで現在地を移動</span>
-        </label>
+    <section class="section experience reveal" id="experience"><div class="section-heading"><p class="eyebrow">PROGRAM</p><h2>夜の庭を楽しむ、<br><em>4つの体験</em></h2></div><div class="experience-grid"><a href="#illumination"><span>01</span><h3>没入型<br>ライトアップ</h3><p>水と光がつくる、夜の庭の景色。</p><b>↘</b></a><a href="#workshop"><span>02</span><h3>テクスチャ<br>アート</h3><p>自分だけの作品をつくるワークショップ。</p><b>↘</b></a><a href="#cafe"><span>03</span><h3>喫茶<br>「星庭」</h3><p>視覚と味覚で楽しむ、夜空の味。</p><b>↘</b></a><a href="#garden-card"><span>04</span><h3>星庭カード<br>の配布</h3><p>来場者だけが受け取れる記念カード。</p><b>↘</b></a></div></section>
 
-        <form id="spotForm" class="spot-form">
-          <div class="form-grid">
-            <label>
-              <span>タイトル</span>
-              <input id="spotTitle" name="title" type="text" value="新しい音声スポット" required>
-            </label>
-            <label>
-              <span>半径 m</span>
-              <input id="spotRadius" name="radius" type="number" min="5" max="500" step="5" value="40" required>
-            </label>
-          </div>
+    <section class="section illumination reveal" id="illumination"><div class="section-heading"><p class="eyebrow">IMMERSIVE LIGHT-UP</p><h2>没入型ライトアップ</h2></div><div class="illumination-grid"><article><div class="moon-shape"></div><div><h3>枯山水を月面に見立てた<br>演出</h3><p class="area">枯山水エリア</p><ul><li>枯山水の新たな鑑賞価値の創出</li><li>日本庭園の「見立て」文化の体験</li></ul></div></article><article><div class="water-lines"></div><div><h3>水と光による没入感</h3><p class="area">池エリア</p><ul><li>水面を活用した夜間景観の創出</li><li>庭園の静寂性を活かした没入体験</li></ul></div></article></div></section>
 
-          <div class="form-grid">
-            <label>
-              <span>緯度</span>
-              <input id="spotLat" name="lat" type="number" step="0.000001" required>
-            </label>
-            <label>
-              <span>経度</span>
-              <input id="spotLng" name="lng" type="number" step="0.000001" required>
-            </label>
-          </div>
+    <section class="section cafe reveal" id="cafe"><div class="section-heading"><p class="eyebrow">NIGHT CAFE “HOSHIZORA”</p><h2>喫茶で味わう、<br><em>宇宙のひととき</em></h2><p>夜の庭を歩いたあとは、あたたかな灯りの喫茶「星庭」へ。詳細なメニューは専用ページでご案内します。</p></div><div class="cafe-images"><div><img src="assets/img/cafe_image_drink.png" alt="喫茶のドリンクイメージ"><span>DRINK</span></div><div><img src="assets/img/cafe_image_desert.png" alt="喫茶のデザートイメージ"><span>DESSERT</span></div></div><a class="text-link" href="cafe/">喫茶の詳細を見る →</a></section>
 
-          <label>
-            <span>MP3 URL / パス</span>
-            <input id="spotAudio" name="audio" type="text" placeholder="audio/guide-01.mp3">
-          </label>
+    <section class="section garden-card reveal" id="garden-card"><div class="section-heading"><p class="eyebrow">GARDEN CARD</p><h2>来場者への<br><em>カード配布</em></h2></div><div class="card-pair"><article><div><small>EVENT DAY</small><h3>“星庭カード”</h3><p>入園時、入園料と引き換えに全員に配布。全6種からランダムで、庭園のおすすめスポットをカードにします。</p></div><img src="assets/img/garden_card_night.png" alt="星庭カードの夜デザイン"></article><article><div><small>AFTER EVENT</small><h3>“花庭カード”</h3><p>星庭カードを提示した来園者へ、先着100名限定で配布します。</p></div><img src="assets/img/garden_card_day.png" alt="花庭カードの昼デザイン"></article></div></section>
 
-          <label>
-            <span>MP3 ファイル</span>
-            <input id="spotFile" name="file" type="file" accept="audio/mpeg,audio/mp3,audio/*">
-          </label>
+    <section class="section workshop reveal" id="workshop"><div><p class="eyebrow">WORKSHOP</p><h2>思い出を持ち帰る、<br><em>テクスチャアート</em></h2><p>夜の庭で感じたものを、自由な模様と色で一枚の作品に。素材に触れ、手を動かしながら、自分だけの星空をつくります。</p></div><div class="detail-panel"><small>体験内容</small><strong>テクスチャアート制作</strong><small>参加について</small><strong>イベント会場にてご案内</strong><a href="workshop/">詳細を見る →</a></div></section>
 
-          <div class="button-row">
-            <button class="secondary-button" id="useCurrentButton" type="button">現在地を使う</button>
-            <button class="primary-button" type="submit">スポット追加</button>
-          </div>
-        </form>
+    <section class="section access reveal" id="access"><div class="section-heading"><p class="eyebrow">ACCESS</p><h2>高尾駒木野庭園</h2><p>〒193-0844 東京都八王子市裏高尾町268-1<br><small>高尾山口駅から徒歩約15分・高尾駅から徒歩約20分</small></p></div><div class="access-price"><small>入場料</small><strong>一般　500円</strong><strong>中学生　300円</strong><span>小学生以下無料</span></div></section><div class="map-frame"><iframe title="高尾駒木野庭園のGoogleマップ" src="https://www.google.com/maps?q=%E9%AB%98%E5%B0%BE%E9%A7%92%E6%9C%A8%E9%87%8E%E5%BA%AD%E5%9C%92&output=embed" loading="lazy"></iframe></div>
 
-        <div class="spots-header">
-          <h2>音声スポット</h2>
-          <div class="spots-actions">
-            <button id="exportButton" class="text-button" type="button">JSON出力</button>
-            <button id="resetButton" class="text-button" type="button">リセット</button>
-          </div>
-        </div>
-        <ol id="spotsList" class="spots-list"></ol>
-      </aside>
-    </main>
-
-    <template id="spotItemTemplate">
-      <li class="spot-item">
-        <button class="spot-main" type="button">
-          <span class="spot-title"></span>
-          <span class="spot-meta"></span>
-        </button>
-        <button class="spot-play" type="button" aria-label="音声を試聴" title="音声を試聴">▶</button>
-      </li>
-    </template>
-
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js"></script>
-  </body>
+    <section class="socials reveal"><p class="eyebrow">FOLLOW US</p><h2>イベントの最新情報</h2><p>準備の様子や当日のご案内をInstagramでお届けします。</p><div class="social-grid"><a href="#"><img src="assets/img/instagram.svg" alt="">奥山ゼミ Instagram <span>↗</span></a><a href="#"><img src="assets/img/instagram.svg" alt="">ヨークゼミ Instagram <span>↗</span></a></div></section>
+  </main>
+  <footer><span>星庭 — 星ふる高尾の夜の旅</span></footer>
+  <script>const t=document.querySelector('.menu-toggle'),n=document.querySelector('.site-nav');t?.addEventListener('click',()=>{const open=n.classList.toggle('is-open');t.setAttribute('aria-expanded',open)});const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('is-visible')}),{threshold:.12});document.querySelectorAll('.reveal').forEach(e=>io.observe(e));</script>
+</body>
 </html>
