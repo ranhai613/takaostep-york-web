@@ -1,50 +1,105 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# 高尾ステップ位置情報連動謎解き Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. 体験を中心にした端末設計
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+本プロジェクトは、参加者のスマートフォンを「拾った宇宙端末」として一貫して
+扱わなければならない。UI、音声、字幕、スキャン、パーツ獲得、船内DB、最終認証、
+エンディングは、通常の観光アプリではなく『宇宙（そら）からの漂流者』の物語と
+プレイヤーの行動を強化する目的で設計する。歩行中は音声を主役とし、重要な謎解きや
+入力は安全に立ち止まれる場所でのみ行える状態にする。新しい機能は、実際の街歩き
+体験、物語の理解、または謎解きの納得感への寄与を説明できない限り追加してはならない。
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. 進行は明示的な状態とデータで管理する
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+ゲームの進行は、音声スポットの再生済みフラグだけで表現してはならない。章、地点、
+音声クリップ、謎、ヒント、獲得パーツ、最終認証、エンディングを、明示的な状態遷移
+として管理しなければならない。コンテンツはコードから分離したJSON等のデータ単位で
+定義し、`chapter`、`spot`、`audio`、`puzzle`、`part`、`state` の識別子と関係を
+一貫して保つ。前の謎の完了、地点到達、正解、パーツ獲得などの条件を満たさない限り、
+後続イベントを誤って発火させてはならない。
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. 位置情報の失敗を前提に完走可能にする
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+GPSを唯一の進行解除手段にしてはならない。各地点は、現地テストで決めた安全な判定
+半径を用い、GPS到達判定に加えて現地コード、QR、または運営コードによる救済経路を
+提供しなければならない。位置情報の許可拒否、精度不足、タイムアウト、通信切断、
+閉園・通行不可が発生しても、プレイヤーが適切な代替手段で進行を継続できることを
+受入テストで確認する。位置情報の利用目的、保存有無、破棄方針も画面上で明示する。
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. 音声・字幕・保存を同等の完走経路として扱う
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+音声自動再生や常時オンライン接続を完走の前提にしてはならない。音声は短いクリップ
+に分割し、再生、一時停止、10秒戻し、最初から再生、字幕表示、再開を提供しなければ
+ならない。音声が再生できない場合も、全文字幕と画面上の謎情報だけで最後まで進める
+ことを保証する。章、既聴クリップ、正解、ヒント履歴、獲得パーツ、完了状態は端末に
+保存し、ブラウザの再読込や再起動後も同じ区間から復帰できなければならない。
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. 静的・単純・検証可能な技術を優先する
+
+初期の完成版は静的ホスティング、Vanilla JavaScriptのES Modules、Leaflet、ブラウザ
+標準APIを基本構成とする。フレームワーク、バックエンド、追加ライブラリは、具体的な
+要件と保守上の利益を示せる場合に限って導入する。静的構成を採用しても、Service
+Workerによる主要音声・画像のキャッシュ、コンテンツのバージョン管理、保存状態の
+スキーマ管理、運営者向けの安全な解除手段を省略してはならない。プレイヤー向け画面
+と地点追加・リセット・デバッグ等の運営機能は分離し、プレイヤーが進行を不用意に
+変更できないようにする。
+
+## Additional Constraints
+
+- 配信はHTTPSを前提とし、位置情報、音声、振動、キャッシュの利用可否を対象端末で
+  確認する。
+- 本ゲームの実装はリポジトリ内の `docs/mystery-develop/` をルートとして行い、アプリ
+  ケーションコード、静的アセット、設定、テスト、ビルド・補助ファイルを同ディレクトリ
+  内に置かなければならない。公開エントリーポイントは `docs/mystery-develop/index.html`
+  とし、`index.html` は同ディレクトリ直下に置かなければならない。
+- 屋外の日中でも読める高コントラスト、拡大可能な問題画像、代替テキスト、字幕、
+  文字サイズへの配慮を実装しなければならない。
+- 音声は周囲の音が聞こえる音量を案内し、両耳を塞がず歩きスマホをしない安全案内を
+  開始時および各謎の操作前に表示する。
+- 私有地、車道、踏切、混雑地点、段差付近にチェックポイントを設定してはならない。
+  荒天、猛暑、日没、工事、庭園閉園時の中止または代替進行を運営手順に含める。
+- 回答判定は英字の大小、前後空白、全角英数、数字のハイフン・空白を仕様どおりに
+  正規化する。不正解は再試行可能とし、誤答回数でプレイヤーを進行不能にしない。
+- Q1の図版と解法、1817年の八王子隕石、高尾山・北斗七星・ケーブルカーに関する
+  表現は、公開前に第三者テストまたは一次資料確認を完了する。
+- 位置情報や分析データは必要最小限にし、分析を行う場合は開始、地点到達、正解、
+  ヒント利用、離脱、完了を目的と利用範囲を明示した上で記録する。
+
+## Development Workflow and Quality Gates
+
+- 仕様変更時は、決定事項表、画面一覧、謎仕様、音声台本、コンテンツデータの関係を
+  同時に確認し、識別子と版番号を更新する。
+- 実装は、まず仮素材で導入からQ1〜Q4、最終認証、エンディングまでを通す状態遷移を
+  検証してから、本素材と演出を組み込む。
+- 各地点は複数端末・異なる天候・異なるGPS精度で実歩行テストを行い、GPS解除と
+  救済解除の両方が成功することを確認する。
+- 受入テストでは、開始から終了までの通常進行、再読込・再起動からの復帰、音声失敗、
+  位置情報失敗、表記揺れ、全ヒント利用、速解きを必ず含める。
+- 音声クリップは字幕と同じ版で管理し、再生条件、尺、既聴状態、差し替え単位を
+  コンテンツデータで追跡可能にする。
+- 運営者は、章解放、地点スキップ、全リセット、現在状態確認、代替最終地点への
+  切り替えを、プレイヤー操作と混同しない運営画面または手順で実行できなければならない。
+- 公開前に、事実監修、安全確認、権利確認、アクセシビリティ確認、実地テストを完了し、
+  未解決事項を責任者が承認する。
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+本constitutionは、ゲーム仕様、実装計画、タスク、コードレビュー、受入判定に優先する
+プロジェクト原則である。仕様または実装が本原則と衝突する場合、衝突内容、ユーザー体験
+への影響、代替案を記録し、constitutionの改訂または例外承認を行うまで公開品質の完成と
+みなしてはならない。
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+改訂は、変更理由、影響を受ける原則、移行が必要な既存成果物、検証方法を記録して行う。
+原則の追加・削除・意味の変更はMINORまたはMAJOR、文言の明確化のみはPATCHとして
+Semantic Versioningに従って版番号を更新する。ラベルのない要求は、まず本原則、次に
+承認済み仕様、最後に実装上の都合の順で評価する。
+
+各機能の計画・実装・レビューでは、状態管理、位置情報救済、音声字幕、保存復帰、安全、
+アクセシビリティ、オフライン動作への適合を確認する。constitutionに対する違反は、
+リリース前に是正するか、責任者が期限と影響を明記した例外として承認しなければならない。
+
+TODO(RATIFICATION_DATE): 当初採択日をプロジェクト責任者が確認し、実日付へ置換する。
+
+**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-10
