@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "release-config.schema.json",
+  "title": "Release Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "releaseId", "contentVersion", "routeMode", "initialStateProfile", "contentPath", "assetManifestPath", "cacheName", "map"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "releaseId": { "type": "string", "minLength": 1 },
+    "contentVersion": { "type": "string", "minLength": 1 },
+    "routeMode": { "enum": ["primary", "alternate"] },
+    "initialStateProfile": { "enum": ["normal", "test"] },
+    "contentPath": { "type": "string", "minLength": 1 },
+    "assetManifestPath": { "type": "string", "minLength": 1 },
+    "cacheName": { "type": "string", "minLength": 1 },
+    "compatibleReleaseIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["center", "zoom", "tileUrl", "attribution"],
+      "properties": {
+        "center": { "type": "array", "prefixItems": [{ "type": "number", "minimum": -90, "maximum": 90 }, { "type": "number", "minimum": -180, "maximum": 180 }], "items": false },
+        "zoom": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "tileUrl": { "type": "string" },
+        "attribution": { "type": "string" }
+      }
+    }
+  }
+}

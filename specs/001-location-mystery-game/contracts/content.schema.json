@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "content.schema.json",
+  "title": "Mystery Game Content",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "releaseId", "chapters", "spots", "audioClips", "puzzles", "parts"],
+  "properties": {
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "releaseId": { "type": "string", "minLength": 1 },
+    "chapters": { "type": "array", "minItems": 4, "items": { "$ref": "#/$defs/chapter" } },
+    "spots": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/spot" } },
+    "audioClips": { "type": "array", "items": { "$ref": "#/$defs/audio" } },
+    "puzzles": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/puzzle" } },
+    "parts": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/part" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "chapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "title", "startEventId", "completionEventId", "sceneIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "order": { "type": "integer", "minimum": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "startEventId": { "$ref": "#/$defs/id" },
+        "completionEventId": { "$ref": "#/$defs/id" },
+        "sceneIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/id" } }
+      }
+    },
+    "spot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "lat", "lng", "radiusM", "safeStopText", "directionText", "arrivalEventId", "targetPuzzleId", "fallbackMode"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "title": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 1 },
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lng": { "type": "number", "minimum": -180, "maximum": 180 },
+        "radiusM": { "type": "number", "minimum": 5, "maximum": 500 },
+        "safeStopText": { "type": "string", "minLength": 1 },
+        "directionText": { "type": "string", "minLength": 1 },
+        "arrivalEventId": { "$ref": "#/$defs/id" },
+        "targetPuzzleId": { "$ref": "#/$defs/id" },
+        "fallbackMode": { "const": "player-confirmation" }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "chapterId", "kind", "src", "subtitle", "triggerEventId", "priority", "requiredForOffline", "replayable"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "chapterId": { "$ref": "#/$defs/id" },
+        "kind": { "enum": ["main", "bridge", "system", "effect", "bgm"] },
+        "src": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "durationSeconds": { "type": "number", "minimum": 0 },
+        "triggerEventId": { "$ref": "#/$defs/id" },
+        "priority": { "type": "integer", "minimum": 0 },
+        "requiredForOffline": { "type": "boolean" },
+        "replayable": { "type": "boolean" }
+      }
+    },
+    "puzzle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "type", "prompt", "acceptedAnswers", "normalizationRules", "hints", "explanation", "partId", "completionEventId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "order": { "type": "integer", "minimum": 1 },
+        "type": { "enum": ["text", "reorder"] },
+        "prompt": { "type": "string", "minLength": 1 },
+        "image": { "type": ["string", "null"] },
+        "altText": { "type": ["string", "null"] },
+        "acceptedAnswers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "normalizationRules": { "type": "array", "uniqueItems": true, "items": { "enum": ["trim", "case-fold", "fullwidth-to-ascii", "remove-space", "remove-hyphen"] } },
+        "hints": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "string", "minLength": 1 } },
+        "explanation": { "type": "string", "minLength": 1 },
+        "partId": { "$ref": "#/$defs/id" },
+        "completionEventId": { "$ref": "#/$defs/id" }
+      }
+    },
+    "part": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "displayText", "unlockEventId", "image", "effectAudio"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "displayText": { "enum": ["R", "A", "M", "I"] },
+        "unlockEventId": { "$ref": "#/$defs/id" },
+        "image": { "type": "string" },
+        "effectAudio": { "type": "string" }
+      }
+    }
+  }
+}
