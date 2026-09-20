@@ -10,3 +10,11 @@ test('tap swap retains four unique letters and MIRA succeeds', () => {
   s.reachedSpotIds=['spot-1','spot-2','spot-3','spot-4']; s.solvedPuzzleIds=['q1','q2','q3']; s.collectedPartIds=['part-r','part-a','part-m','part-i'];
   assert.equal(transition(s,{type:'authenticate-final'}).currentSceneId,'s10');
 });
+
+test('Q4 selection updates are persisted without requiring a screen transition', () => {
+  let s=createInitialState('r');
+  const beforeScene=s.currentSceneId;
+  s=reducePlayerState(s,{type:'q4-swap',from:0,to:2});
+  assert.deepEqual(s.q4Order,['M','A','R','I']);
+  assert.equal(s.currentSceneId,beforeScene);
+});

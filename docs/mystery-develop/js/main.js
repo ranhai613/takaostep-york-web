@@ -1,4 +1,5 @@
 import { validateAll, assertValid } from './core/content-validator.js';
+import { getPuzzleBriefingClip, getPuzzleBriefingEventId, getTravelClips } from './core/dialogue-flow.js';
 import { createInitialState, reducePlayerState } from './core/game-state.js';
 import { resolveRuntimeMode } from './core/runtime-mode.js';
 import { transition } from './core/state-machine.js';
@@ -10,7 +11,7 @@ import { AudioQueue } from './services/audio-queue.js';
 import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
-import { showPreparation, showIntro, showTravel, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
+import { showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
 
 const renderer=new Renderer();
 const store=createStateStore();
@@ -22,10 +23,12 @@ let selectedLetter=null;
 
 const fetchJson=async path=>{const response=await fetch(path,{cache:'no-store'});if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response.json()};
 const clipById=id=>content.audioClips.find(clip=>clip.id===id);
+const playbackPriority=clip=>clip.kind==='main'?20000+(clip.priority??0):clip.kind==='bridge'?10000+(clip.priority??0):(clip.priority??0);
+const travelDelayClip=clip=>({id:`system-travel-delay-${clip.id}`,kind:'system',src:'./assets/audio/silence-10s.mp3',subtitle:'',priority:0,transient:true});
 const audioQueue=new AudioQueue({
   onSubtitle:(subtitle)=>{const box=document.querySelector('.subtitle');if(box&&subtitle)box.textContent=subtitle},
-  onProgress:(clip,seconds)=>{if(!clip||!state)return;commit(reducePlayerState(state,{type:'audio-progress',audioId:clip.id,seconds}),{render:false})},
-  onStatus:({status,clip})=>{if(status==='failed')renderer.announce('音声を再生できません。字幕で続けられます。');if(status==='ended'&&clip&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
+  onProgress:(clip,seconds)=>{if(!clip||clip.transient||!state)return;commit(reducePlayerState(state,{type:'audio-progress',audioId:clip.id,seconds}),{render:false})},
+  onStatus:({status,clip})=>{if(status==='failed')renderer.announce('音声の自動再生がブロックされました。「通信を再生」を押してください。');if(status==='ended'&&clip&&!clip.transient&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 });
 
 function commit(next,{render=true}={}){
@@ -43,10 +46,10 @@ function renderState(){
   mapView.destroy();locationWatcher?.stop();
   if(state.endingSeen&&state.currentSceneId==='completed'){renderer.showMemorial(content.parts,()=>renderer.showEnding(clipById('audio-ending').subtitle,()=>renderState()));return}
   if(state.currentSceneId==='s00'){showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});return}
-  if(['s01','s02','s03'].includes(state.currentSceneId)){showIntro(renderer,{step:state.currentSceneId,clip:clipById('audio-intro'),onAudioTest:async()=>{await audioQueue.unlock();renderer.tone();renderer.announce('確認音を再生しました')},onSubtitle:()=>commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'})),onNext:()=>{if(state.currentSceneId==='s01')commit(reducePlayerState(state,{type:'navigate',sceneId:'s02'}));else if(state.currentSceneId==='s02')commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}));else runTransition({type:'complete-intro',audioMode:'subtitles'})}});return}
+  if(['s01','s02','s03'].includes(state.currentSceneId)){const intro=clipById('audio-intro');showIntro(renderer,{step:state.currentSceneId,clip:intro,onAudioTest:async()=>{await audioQueue.unlock();renderer.tone();renderer.announce('確認音を再生しました')},onAudio:action=>handleAudio(action,[intro]),onSubtitle:()=>{audioQueue.clear();commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}))},onNext:async()=>{if(state.currentSceneId==='s01')commit(reducePlayerState(state,{type:'navigate',sceneId:'s02'}));else if(state.currentSceneId==='s02'){commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}));await handleAudio('play',[intro])}else if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay()}});return}
   if(state.currentSceneId==='s04'){renderTravel();return}
   if(['s05','s06'].includes(state.currentSceneId)){renderPuzzleScreen();return}
-  if(state.currentSceneId==='s07'){const puzzle=content.puzzles.find(item=>state.solvedPuzzleIds.includes(item.id)&&!state.completedEventIds.includes(`${item.id}-continued`))??content.puzzles[Math.max(0,state.solvedPuzzleIds.length-1)];const part=content.parts.find(item=>item.id===puzzle.partId);renderer.showPartAcquired(part,puzzle,inventory(),()=>{let next=reducePlayerState(state,{type:'complete-event',id:`${puzzle.id}-continued`});next=transition(next,{type:'advance-after-part'});commit(next)});return}
+  if(state.currentSceneId==='s07'){const puzzle=content.puzzles.find(item=>state.solvedPuzzleIds.includes(item.id)&&!state.completedEventIds.includes(`${item.id}-continued`))??content.puzzles[Math.max(0,state.solvedPuzzleIds.length-1)];const part=content.parts.find(item=>item.id===puzzle.partId);renderer.showPartAcquired(part,puzzle,inventory(),()=>{let next=reducePlayerState(state,{type:'complete-event',id:`${puzzle.id}-continued`});next=transition(next,{type:'advance-after-part'});if(commit(next))startTravelAudioWithDelay()});return}
   if(['s08','s09'].includes(state.currentSceneId)){renderFinal();return}
   if(state.currentSceneId==='s10'){renderer.showEnding(clipById('audio-ending').subtitle,()=>runTransition({type:'complete-ending'}));return}
   showFatal(renderer,'進行状態を読み取れません',`不明な画面ID: ${state.currentSceneId}`,()=>location.reload());
@@ -55,9 +58,15 @@ function renderState(){
 function renderTravel(){
   const spot=currentSpot(),index=spot.order;
   const trigger=index===1?'intro-completed':`q${index-1}-solved`;
-  const routeClips=content.audioClips.filter(clip=>clip.triggerEventId===trigger);
+  const routeClips=getTravelClips(content.audioClips,trigger);
   showTravel(renderer,{spot,index,inventory:inventory(),subtitle:routeClips[0]?.subtitle??'',onArrive:()=>arriveAt(spot),onLocation:()=>startLocation(spot),onAudio:action=>handleAudio(action,routeClips)});
   mapView.mount(document.querySelector('#map'),spot,release.map);
+}
+
+function startTravelAudioWithDelay(){
+  const spot=currentSpot(),trigger=spot.order===1?'intro-completed':`q${spot.order-1}-solved`;
+  const clips=getTravelClips(content.audioClips,trigger).filter(clip=>!state.listenedAudioIds.includes(clip.id));
+  if(clips.length)handleAudio('delayed-play',clips);
 }
 
 function startLocation(spot){
@@ -69,18 +78,38 @@ function startLocation(spot){
 function arriveAt(spot){if(state.reachedSpotIds.includes(spot.id))return;locationWatcher?.stop();if(runTransition({type:'arrive',spotId:spot.id},{render:false})){renderer.arrivalEffect();setTimeout(renderState,650)}}
 
 async function handleAudio(action,clips){
-  if(action==='pause'){audioQueue.pause();return}if(action==='rewind'){audioQueue.rewind(10);renderer.announce('10秒戻しました');return}if(action==='restart'){audioQueue.restart();renderer.announce('最初から再生します');return}
-  await audioQueue.unlock();if(audioQueue.activeClip&&!audioQueue.activeClip.src)audioQueue.finishActive();for(const clip of clips)if(!state.listenedAudioIds.includes(clip.id))audioQueue.enqueue(clip);const clip=await audioQueue.playNext();if(clip&&!clip.src){renderer.announce('音声素材は準備中です。全文字幕を表示しています。');commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
+  if(action==='pause'){audioQueue.pause();return}if(action==='rewind'){const activeId=audioQueue.activeClip?.id;const target=audioQueue.rewind(10,activeId?state.audioProgress[activeId]:0);if(target===null){renderer.announce('再生中の音声がありません');return}if(activeId)commit(reducePlayerState(state,{type:'audio-progress',audioId:activeId,seconds:target}),{render:false});renderer.announce(target===0?'音声の先頭まで戻しました':`10秒戻しました。${Math.floor(target)}秒から再生します`);return}
+  if(action==='priority-play')audioQueue.clear();
+  if(action==='restart'&&audioQueue.activeClip){audioQueue.restart();await audioQueue.resume();renderer.announce('最初から再生します');return}
+  if(action==='play'&&audioQueue.activeClip?.src){await audioQueue.resume();return}
+  if(audioQueue.activeClip&&!audioQueue.activeClip.src)audioQueue.finishActive();
+  const unlistened=clips.filter(clip=>!state.listenedAudioIds.includes(clip.id));
+  const candidates=unlistened.length?unlistened:clips;
+  if(action==='delayed-play'){
+    const ordered=[...candidates].sort((a,b)=>playbackPriority(b)-playbackPriority(a));
+    audioQueue.enqueueSequence(ordered.flatMap(clip=>clip.kind==='bridge'?[travelDelayClip(clip),clip]:[clip]));
+  }else for(const clip of candidates)audioQueue.enqueue(clip);
+  const clip=await audioQueue.playNext();
+  if(action==='restart')renderer.announce('最初から再生します');else if(action==='delayed-play')renderer.announce('10秒後に通信を再生します');
+  if(clip&&!clip.src){renderer.announce('音声素材は準備中です。全文字幕を表示しています。');commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 }
 
 function renderPuzzleScreen(){
   const index=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);const puzzle=content.puzzles.find(item=>item.order===index);if(!puzzle){showFatal(renderer,'問題を読み込めません','現在地点に対応する問題がありません。',renderState);return}
-  showPuzzle(renderer,{puzzle,hintCount:hintCount(puzzle),inventory:inventory(),onSubmit:(answer,feedback)=>{if(!isAcceptedAnswer(answer,puzzle.acceptedAnswers,puzzle.normalizationRules)){feedback.className='feedback error';feedback.textContent='認証できませんでした。入力を見直すか、ヒントを確認してください。何度でも再試行できます。';return}runTransition({type:'solve',puzzleId:puzzle.id,correct:true,partId:puzzle.partId})},onHint:()=>runTransition({type:'view-hint',puzzleId:puzzle.id,hintIndex:hintCount(puzzle)}),onZoom:()=>renderer.showDialog({title:'問題画像',body:`<img class="puzzle-image" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"><p>${escapeHtml(puzzle.altText)}</p>`,confirmText:'閉じる',cancelText:''})});
+  const briefing=getPuzzleBriefingClip(content.audioClips,puzzle.order);
+  const briefingEventId=getPuzzleBriefingEventId(puzzle.id);
+  if(briefing&&!state.completedEventIds.includes(briefingEventId)){
+    showPuzzleBriefing(renderer,{puzzle,clip:briefing,onAudio:action=>handleAudio(action,[briefing]),onContinue:()=>{audioQueue.clear();let next=reducePlayerState(state,{type:'audio-listened',audioId:briefing.id});next=reducePlayerState(next,{type:'complete-event',id:briefingEventId});commit(next)}});
+    handleAudio('priority-play',[briefing]);
+    return;
+  }
+  showPuzzle(renderer,{puzzle,hintCount:hintCount(puzzle),inventory:inventory(),onSubmit:(answer,feedback)=>{if(!isAcceptedAnswer(answer,puzzle.acceptedAnswers,puzzle.normalizationRules)){feedback.className='feedback error';feedback.textContent='認証できませんでした。入力を見直すか、ヒントを確認してください。';return}runTransition({type:'solve',puzzleId:puzzle.id,correct:true,partId:puzzle.partId})},onHint:()=>runTransition({type:'view-hint',puzzleId:puzzle.id,hintIndex:hintCount(puzzle)}),onZoom:()=>renderer.showDialog({title:'問題画像',body:`<img class="puzzle-image" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"><p>${escapeHtml(puzzle.altText)}</p>`,confirmText:'閉じる',cancelText:''})});
 }
 
 function renderFinal(){
   const puzzle=content.puzzles.find(item=>item.id==='q4');
-  showFinal(renderer,{puzzle,order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),onSelect:index=>{if(selectedLetter===null){selectedLetter=index;renderFinal();return}if(selectedLetter===index){selectedLetter=null;renderFinal();return}const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}))},onSubmit:feedback=>{if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}runTransition({type:'authenticate-final'})},onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})});
+  const finalConnection=content.audioClips.find(clip=>clip.id==='audio-final-connection');
+  showFinal(renderer,{puzzle,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),onSelect:index=>{if(selectedLetter===null){selectedLetter=index;return {order:state.q4Order,selected:selectedLetter}}if(selectedLetter===index){selectedLetter=null;return {order:state.q4Order,selected:selectedLetter}}const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}),{render:false});return {order:state.q4Order,selected:selectedLetter}},onSubmit:feedback=>{if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}runTransition({type:'authenticate-final'})},onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})});
 }
 
 function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}

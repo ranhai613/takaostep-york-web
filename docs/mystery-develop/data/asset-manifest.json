@@ -14,6 +14,7 @@
     "./js/main.js",
     "./js/core/answer-normalizer.js",
     "./js/core/content-validator.js",
+    "./js/core/dialogue-flow.js",
     "./js/core/game-state.js",
     "./js/core/runtime-mode.js",
     "./js/core/state-machine.js",
@@ -31,10 +32,18 @@
     "./data/route-alternate.json",
     "./assets/icons/icon.svg",
     "./assets/images/puzzles/q1.jpg",
+    "./assets/images/puzzles/q3-morse-code.jpg",
     "./assets/images/parts/r.svg",
     "./assets/images/parts/a.svg",
     "./assets/images/parts/m.svg",
     "./assets/images/parts/i.svg"
   ],
-  "optional": []
+  "optional": [
+    "./assets/audio/silence-10s.mp3",
+    "./assets/audio/……聞こえる！？ よかった、通信がつながった！ その端末を拾ってくれた地球人だよね。...地球人、改めてよろしくね。.mp3",
+    "./assets/audio/君たちは、この場所を「高尾山」って呼んでるんだよね。...なんだか不思議だね。.mp3",
+    "./assets/audio/地球の空気って面白いね。...宇宙船の中では空気は機械で作るものだから、植物が空気を作ってくれるって、ボクにはちょっと不思議なんだ。.mp3",
+    "./assets/audio/高尾について調べてたとき、面白いものを見つけたんだ。...もしかして、宇宙人より地球人のほうが想像力豊かなんじゃない？.mp3",
+    "./assets/audio/水星、金星、地球、火星……地球人は惑星にいろんな名前を付けてる。...パスワードがわかれば、箱を開けられるかも.mp3"
+  ]
 }

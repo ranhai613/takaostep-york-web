@@ -10,6 +10,7 @@ test('ending completion is one-time and replay is state-neutral', () => {
 });
 test('ending source includes the required story facts', async () => {
   const content=JSON.parse(await (await import('node:fs/promises')).readFile(new URL('../../data/content.json',import.meta.url),'utf8'));
-  const text=content.audioClips.find(x=>x.id==='audio-ending').subtitle;
+  const q4=content.puzzles.find(puzzle=>puzzle.id==='q4');
+  const text=[...content.audioClips.map(clip=>clip.subtitle),q4.prompt,...q4.acceptedAnswers].join('\n');
   for (const fact of ['1817','200年','八王子隕石','MIRA','相棒','1オークエン']) assert.ok(text.includes(fact));
 });
