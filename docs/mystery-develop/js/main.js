@@ -11,7 +11,7 @@ import { AudioQueue } from './services/audio-queue.js';
 import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
-import { showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
+import { showDevicePickup, showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
 
 const renderer=new Renderer();
 const store=createStateStore();
@@ -46,6 +46,7 @@ function renderState(){
   mapView.destroy();locationWatcher?.stop();
   if(state.endingSeen&&state.currentSceneId==='completed'){renderer.showMemorial(content.parts,()=>renderer.showEnding(clipById('audio-ending').subtitle,()=>renderState()));return}
   if(state.currentSceneId==='s00'){showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});return}
+  if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){showDevicePickup(renderer,{onPickup:()=>commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))});return}
   if(['s01','s02','s03'].includes(state.currentSceneId)){const intro=clipById('audio-intro');showIntro(renderer,{step:state.currentSceneId,clip:intro,onAudioTest:async()=>{await audioQueue.unlock();renderer.tone();renderer.announce('確認音を再生しました')},onAudio:action=>handleAudio(action,[intro]),onSubtitle:()=>{audioQueue.clear();commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}))},onNext:async()=>{if(state.currentSceneId==='s01')commit(reducePlayerState(state,{type:'navigate',sceneId:'s02'}));else if(state.currentSceneId==='s02'){commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}));await handleAudio('play',[intro])}else if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay()}});return}
   if(state.currentSceneId==='s04'){renderTravel();return}
   if(['s05','s06'].includes(state.currentSceneId)){renderPuzzleScreen();return}
