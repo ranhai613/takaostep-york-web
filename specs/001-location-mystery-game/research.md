@@ -30,6 +30,16 @@
 
 **Source**: [MDN: Using Service Workers](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers), [MDN: CacheStorage](https://developer.mozilla.org/en-US/docs/Web/API/CacheStorage)
 
+### ローカル開発とオフライン試験の分離
+
+**Decision**: 実行モードを `development | offline-test | production` の3値として起動時に決定する。ホストが `localhost`、`127.0.0.1`、`[::1]` で、クエリが厳密に `sw=1` ではない場合は通常開発とする。通常開発ではService Workerを登録せず、現在のアプリスコープの既存登録を解除し、同一オリジン内の `mira-signal-` 接頭辞を持つCache Storageだけを削除する。`localStorage` は削除しない。ローカルの `?sw=1` はオフライン試験、非ローカル環境はクエリに関係なく本番とする。
+
+**Rationale**: localhostはService Workerを利用できるため、本番キャッシュが開発変更を隠す。通常開発から永続的なオフライン制御を外せば、素材変更のたびにキャッシュ世代を更新する必要がない。一方、明示的なURLで本番相当経路を残すことで、静的構成のままオフライン検証を再現できる。`URLSearchParams`、登録解除、Cache Storage削除はいずれも対象ブラウザで広く利用できる標準APIである。
+
+**Alternatives considered**: 毎回のキャッシュ名更新は操作漏れが起きやすいため不採用。ブラウザ全体のキャッシュ削除はPlayerState以外のデータや他サイトへ影響するため不採用。全キャッシュへ時刻クエリを付ける方式は本番の再現性とオフライン契約を崩すため不採用。開発者ツールの「キャッシュ無効化」はツールを閉じると効かず、受入手順を自動化できないため補助手段に限定する。
+
+**Source**: [MDN: ServiceWorkerRegistration.unregister()](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerRegistration/unregister), [MDN: CacheStorage.delete()](https://developer.mozilla.org/docs/Web/API/CacheStorage/delete), [MDN: URLSearchParams.has()](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/has), [MDN: Service Worker API](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API)
+
 ### 進行状態と公開版
 
 **Decision**: 小容量の `PlayerState` を `localStorage` に保存し、`schemaVersion` と `releaseId` を必須にする。既知の旧形式だけ移行し、移行不能時は旧状態を消さずに新規開始を案内する。
@@ -72,4 +82,4 @@
 
 ## Resolution Status
 
-技術上の未解決事項はない。現地座標・判定半径とQ1完成素材は実装方式を阻害しないコンテンツTODOとして、差し替え可能なJSONと仮素材で扱う。
+技術上の未解決事項はない。Q1完成素材は統合済みで、第三者による解法一意性テストを公開前ゲートとして残す。現地座標・判定半径は実装方式を阻害しないコンテンツTODOとして、差し替え可能なJSONと仮値で扱う。

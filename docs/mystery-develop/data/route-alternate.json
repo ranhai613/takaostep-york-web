@@ -1,0 +1,16 @@
+{
+  "releaseId": "mira-poc-2026-09",
+  "spot": {
+    "id": "spot-4",
+    "title": "代替最終観測点（仮）",
+    "order": 4,
+    "lat": 35.64135,
+    "lng": 139.28345,
+    "radiusM": 60,
+    "safeStopText": "庭園閉園時に使用する仮の代替地点です。現地測量と管理者確認後の値へ差し替え、安全な広い場所で操作してください。",
+    "directionText": "公開設定で選択された代替最終観測点へ向かいます。現地案内と安全を優先してください。",
+    "arrivalEventId": "spot-4-arrived",
+    "targetPuzzleId": "q4",
+    "fallbackMode": "player-confirmation"
+  }
+}

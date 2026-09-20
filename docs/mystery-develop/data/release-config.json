@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "mira-poc-2026-09",
+  "contentVersion": "1.0.0-draft",
+  "routeMode": "primary",
+  "initialStateProfile": "normal",
+  "contentPath": "./data/content.json",
+  "assetManifestPath": "./data/asset-manifest.json",
+  "cacheName": "mira-signal-mira-poc-2026-09-r2",
+  "compatibleReleaseIds": [],
+  "map": {
+    "center": [35.6389, 139.2832],
+    "zoom": 15,
+    "tileUrl": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "attribution": "&copy; OpenStreetMap contributors"
+  }
+}

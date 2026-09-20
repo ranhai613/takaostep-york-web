@@ -1,0 +1,13 @@
+{
+  "name": "MIRA SIGNAL｜高尾星間通信",
+  "short_name": "MIRA SIGNAL",
+  "description": "高尾のまちを歩いて宇宙から届いた謎を解く体験",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#08111f",
+  "theme_color": "#08111f",
+  "icons": [
+    { "src": "./assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

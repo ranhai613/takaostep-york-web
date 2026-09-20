@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-labelledby="t d">
+  <title id="t">Q1 太陽系軌道図の仮素材</title><desc id="d">中央の太陽を八つの軌道が囲み、各軌道に文字の手がかりが配置された開発中の図。</desc>
+  <rect width="960" height="600" rx="32" fill="#071523"/>
+  <g fill="none" stroke="#4ed7ca" opacity=".45">
+    <ellipse cx="480" cy="300" rx="90" ry="45"/><ellipse cx="480" cy="300" rx="150" ry="75"/><ellipse cx="480" cy="300" rx="215" ry="108"/><ellipse cx="480" cy="300" rx="280" ry="140"/><ellipse cx="480" cy="300" rx="350" ry="175"/>
+  </g>
+  <circle cx="480" cy="300" r="46" fill="#ffd166"/>
+  <g fill="#eefcff" font-family="sans-serif" font-size="30" font-weight="700"><text x="102" y="124">U</text><text x="210" y="484">N</text><text x="326" y="182">I</text><text x="425" y="508">V</text><text x="557" y="160">E</text><text x="642" y="452">R</text><text x="735" y="214">S</text><text x="824" y="374">E</text></g>
+  <text x="480" y="565" text-anchor="middle" fill="#9fb9c7" font-family="sans-serif" font-size="22">開発用仮図版 — 最終図版は現地テスト後に差し替え</text>
+</svg>

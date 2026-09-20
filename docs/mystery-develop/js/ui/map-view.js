@@ -1,0 +1,6 @@
+export class MapView {
+  constructor({ L=globalThis.L,onTileError=()=>{} }={}){this.L=L;this.onTileError=onTileError;this.map=null;this.positionMarker=null;this.targetMarker=null;this.radius=null}
+  mount(element,spot,mapConfig){this.destroy();if(!this.L||!element){this.onTileError('地図を表示できません。方向案内と到着ボタンは利用できます。');return false}this.map=this.L.map(element,{zoomControl:true}).setView([spot.lat,spot.lng],mapConfig.zoom??16);if(mapConfig.tileUrl){const layer=this.L.tileLayer(mapConfig.tileUrl,{attribution:mapConfig.attribution,maxZoom:19});layer.on('tileerror',()=>this.onTileError('地図タイルを取得できません。方向案内と到着ボタンで進行できます。'));layer.addTo(this.map)}this.targetMarker=this.L.marker([spot.lat,spot.lng]).addTo(this.map).bindPopup(spot.title);this.radius=this.L.circle([spot.lat,spot.lng],{radius:spot.radiusM,color:'#54e6d8',fillColor:'#54e6d8',fillOpacity:.12}).addTo(this.map);setTimeout(()=>this.map?.invalidateSize(),0);return true}
+  updatePosition({lat,lng}){if(!this.map||!this.L)return;if(!this.positionMarker)this.positionMarker=this.L.circleMarker([lat,lng],{radius:8,color:'#08111f',weight:3,fillColor:'#ffd166',fillOpacity:1}).addTo(this.map).bindTooltip('現在地');else this.positionMarker.setLatLng([lat,lng])}
+  destroy(){if(this.map)this.map.remove();this.map=null;this.positionMarker=null;this.targetMarker=null;this.radius=null}
+}

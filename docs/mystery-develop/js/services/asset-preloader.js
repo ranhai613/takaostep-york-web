@@ -1,0 +1,7 @@
+export async function prepareAssets({ required=[], optional=[], cacheName, persist=true, fetcher=fetch, openCache=name=>caches.open(name), onProgress=()=>{}, retries=1 }) {
+  const cache=persist?await openCache(cacheName):null; const requiredFailed=[],optionalFailed=[]; const assets=[...required.map(path=>({path,required:true})),...optional.map(path=>({path,required:false}))]; let completed=0;
+  await Promise.all(assets.map(async asset=>{let response=persist?await cache.match?.(asset.path):null;for(let attempt=0;!response&&attempt<=retries;attempt++){try{const candidate=await fetcher(asset.path,{cache:persist?'reload':'no-store'});if(candidate.ok){response=candidate;break}}catch{}}if(response&&persist&&!(await cache.match?.(asset.path)))await cache.put(asset.path,response.clone());else if(!response)(asset.required?requiredFailed:optionalFailed).push(asset.path);completed++;onProgress({completed,total:assets.length,percent:assets.length?Math.round(completed/assets.length*100):100,path:asset.path,ok:Boolean(response),required:asset.required})}));
+  return {ready:requiredFailed.length===0,requiredFailed,optionalFailed,total:assets.length};
+}
+
+export async function cleanupStaleCaches(cacheStorage=globalThis.caches,currentName,prefix='mira-signal-') { const names=await cacheStorage.keys(); return Promise.all(names.filter(name=>name.startsWith(prefix)&&name!==currentName).map(name=>cacheStorage.delete(name))); }

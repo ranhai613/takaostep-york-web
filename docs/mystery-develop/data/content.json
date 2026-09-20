@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "releaseId": "mira-poc-2026-09",
+  "chapters": [
+    { "id": "chapter-ki", "order": 1, "title": "起｜発見", "startEventId": "game-started", "completionEventId": "intro-completed", "sceneIds": ["s00", "s01", "s02", "s03"] },
+    { "id": "chapter-sho", "order": 2, "title": "承｜回収", "startEventId": "intro-completed", "completionEventId": "q2-solved", "sceneIds": ["s04", "s05", "s06", "s07"] },
+    { "id": "chapter-ten", "order": 3, "title": "転｜記憶", "startEventId": "q2-solved", "completionEventId": "q3-solved", "sceneIds": ["s04", "s05", "s06", "s07"] },
+    { "id": "chapter-ketsu", "order": 4, "title": "結｜帰還", "startEventId": "q3-solved", "completionEventId": "ending-completed", "sceneIds": ["s08", "s09", "s10"] }
+  ],
+  "spots": [
+    { "id": "spot-1", "title": "第一観測点（仮）", "order": 1, "lat": 35.63292, "lng": 139.26971, "radiusM": 45, "safeStopText": "歩道をふさがず、車道や段差から離れた安全な場所で停止してください。位置は現地測量前の仮設定です。", "directionText": "高尾山口駅周辺から第一観測点へ向かいます。地図は補助として使い、周囲を確認して歩いてください。", "arrivalEventId": "spot-1-arrived", "targetPuzzleId": "q1", "fallbackMode": "player-confirmation" },
+    { "id": "spot-2", "title": "第二観測点（仮）", "order": 2, "lat": 35.63603, "lng": 139.27486, "radiusM": 45, "safeStopText": "通行の妨げにならない広い場所で停止してください。位置は現地測量前の仮設定です。", "directionText": "川沿いの安全な歩道を使って第二観測点へ向かいます。", "arrivalEventId": "spot-2-arrived", "targetPuzzleId": "q2", "fallbackMode": "player-confirmation" },
+    { "id": "spot-3", "title": "第三観測点（仮）", "order": 3, "lat": 35.63931, "lng": 139.27977, "radiusM": 50, "safeStopText": "画面操作は立ち止まり、歩行者や自転車の動線を避けてください。位置は現地測量前の仮設定です。", "directionText": "第三観測点へ進み、失われた通信符号を復元します。", "arrivalEventId": "spot-3-arrived", "targetPuzzleId": "q3", "fallbackMode": "player-confirmation" },
+    { "id": "spot-4", "title": "高尾駒木野庭園・最終観測点（仮）", "order": 4, "lat": 35.64223, "lng": 139.28496, "radiusM": 70, "safeStopText": "庭園の開園状況を確認し、園路上の安全な場所で操作してください。閉園時は開催前に代替ルート版へ切り替えます。位置は現地測量前の仮設定です。", "directionText": "最終信号は庭園方面から届いています。開園状況と現地案内に従ってください。", "arrivalEventId": "spot-4-arrived", "targetPuzzleId": "q4", "fallbackMode": "player-confirmation" }
+  ],
+  "audioClips": [
+    { "id": "audio-intro", "chapterId": "chapter-ki", "kind": "main", "src": "", "subtitle": "……応答して。こちら航宙士ミラ。事故で損傷した帰還装置の文字パーツが、この地域に散らばっている。地球人、力を貸して。最初の信号座標を送る。", "durationSeconds": 18, "triggerEventId": "game-started", "priority": 10, "requiredForOffline": false, "replayable": true },
+    { "id": "audio-bridge-1", "chapterId": "chapter-sho", "kind": "bridge", "src": "", "subtitle": "空を見上げる必要はない。足元と周囲を見て進んで。信号は近づいている。", "durationSeconds": 9, "triggerEventId": "intro-completed", "priority": 30, "requiredForOffline": false, "replayable": true },
+    { "id": "audio-main-1", "chapterId": "chapter-sho", "kind": "main", "src": "", "subtitle": "私が眠っていた時間は、あなたたちの暦ではとても長いらしい。記憶を取り戻すには、まず宇宙の並びを読む必要がある。", "durationSeconds": 15, "triggerEventId": "intro-completed", "priority": 20, "requiredForOffline": false, "replayable": true },
+    { "id": "audio-main-2", "chapterId": "chapter-sho", "kind": "main", "src": "", "subtitle": "高尾山の標高と、北の空に並ぶ七つの星。その数字を続けて入力して。", "durationSeconds": 11, "triggerEventId": "q1-solved", "priority": 20, "requiredForOffline": false, "replayable": true },
+    { "id": "audio-main-3", "chapterId": "chapter-ten", "kind": "main", "src": "", "subtitle": "短い信号は点、長い信号は線。区切りごとに文字へ戻せば、私の船に起きたことが見える。", "durationSeconds": 12, "triggerEventId": "q2-solved", "priority": 20, "requiredForOffline": false, "replayable": true },
+    { "id": "audio-ending", "chapterId": "chapter-ketsu", "kind": "main", "src": "", "subtitle": "1817年、私の船は八王子へ落下し、私は約200年眠っていた。八王子隕石と呼ばれた痕跡は、私の帰還船の一部だった。MIRA――それが登録操縦士である私の名。認証完了。ありがとう、地球人……いや、相棒。報酬の1オークエンを送る。1億円ではないから、使い道は帰るまで考えておいて。", "durationSeconds": 32, "triggerEventId": "q4-solved", "priority": 100, "requiredForOffline": false, "replayable": true }
+  ],
+  "puzzles": [
+    { "id": "q1", "order": 1, "type": "text", "prompt": "博士の日記に隠された規則を見つけ、軌道図から8文字の認証コードを導いてください。\n\n［博士の日記］\nようやく目的**地**に到着すると、目の前には大きな**木**が立っていた。\nその木の向こうには、遠く青い**海**が広がっているのが見えた。\n→ SUN\n\n**木**の下で休んでいると、遠くに**海**が見えた。\n**水**を飲みながら、**火**を眺めていると、\n**天**から雨が降り始めた。\n**金**色の光が差し込み、目的**地**へ向かった。\n**土**の上には、不思議な石が落ちていた。\n→ ????????", "image": "./assets/images/puzzles/q1.jpg", "altText": "青い太陽系軌道図。中央の太陽を囲む8本の軌道に惑星を表す記号があり、内側から順に、水星はI、金星はR、地球はS、火星はV、木星はU、土星はE、天王星はE、海王星はNの文字が配置されている。", "acceptedAnswers": ["UNIVERSE"], "normalizationRules": ["trim", "case-fold", "fullwidth-to-ascii", "remove-space"], "hints": ["例文で強調された「地・木・海」は、それぞれ地球・木星・海王星を表します。軌道図の対応する文字を順に読むとSUNになります。", "同じ規則で、本文の強調文字「木・海・水・火・天・金・地・土」を惑星名に置き換えてください。", "木星・海王星・水星・火星・天王星・金星・地球・土星の順に、軌道図の文字を読むと U・N・I・V・E・R・S・E です。"], "explanation": "日記で強調された漢字は惑星名の先頭を表しています。例の「地・木・海」を地球・木星・海王星として軌道図の文字に変換するとSUNになります。同様に「木・海・水・火・天・金・地・土」を変換すると、U・N・I・V・E・R・S・Eとなり、認証コードはUNIVERSEです。", "partId": "part-r", "completionEventId": "q1-solved" },
+    { "id": "q2", "order": 2, "type": "text", "prompt": "高尾山の標高599mと、北斗七星を形づくる星の数を続けて入力してください。", "image": null, "altText": null, "acceptedAnswers": ["5997"], "normalizationRules": ["trim", "fullwidth-to-ascii", "remove-space", "remove-hyphen"], "hints": ["前半は高尾山の標高です。", "後半は北斗七星の星の数です。", "599と7を続けて入力します。"], "explanation": "高尾山の標高599と北斗七星の7を結ぶと5997です。地理・天文表現は公開前に事実確認します。", "partId": "part-a", "completionEventId": "q2-solved" },
+    { "id": "q3", "order": 3, "type": "text", "prompt": "通信符号 ・・・・ / －－－ / ・－・・ / ・ / ・・・ を英字へ戻してください。", "image": null, "altText": "モールス信号で、4短点、3長点、短点長点短点短点、1短点、3短点がスラッシュで区切られている。", "acceptedAnswers": ["HOLES"], "normalizationRules": ["trim", "case-fold", "fullwidth-to-ascii", "remove-space"], "hints": ["スラッシュごとに1文字です。", "最初の・・・・はH、次の－－－はOです。", "順にH・O・L・E・Sとなります。"], "explanation": "モールス信号を区切りごとに変換するとHOLES（穴）となり、船体の損傷記録を示します。", "partId": "part-m", "completionEventId": "q3-solved" },
+    { "id": "q4", "order": 4, "type": "reorder", "prompt": "回収した4文字を登録操縦士の名前に並べ替えて、最終認証してください。", "image": null, "altText": null, "acceptedAnswers": ["MIRA"], "normalizationRules": ["trim", "case-fold"], "hints": ["ミラの名前を英字4文字で表します。", "最初の文字はM、最後の文字はAです。", "並びはM・I・R・Aです。"], "explanation": "4つの文字パーツをMIRAと並べると、航宙士ミラの登録情報と一致します。", "partId": "part-i", "completionEventId": "q4-solved" }
+  ],
+  "parts": [
+    { "id": "part-r", "displayText": "R", "unlockEventId": "q1-solved", "image": "./assets/images/parts/r.svg", "effectAudio": "" },
+    { "id": "part-a", "displayText": "A", "unlockEventId": "q2-solved", "image": "./assets/images/parts/a.svg", "effectAudio": "" },
+    { "id": "part-m", "displayText": "M", "unlockEventId": "q3-solved", "image": "./assets/images/parts/m.svg", "effectAudio": "" },
+    { "id": "part-i", "displayText": "I", "unlockEventId": "spot-4-arrived", "image": "./assets/images/parts/i.svg", "effectAudio": "" }
+  ]
+}

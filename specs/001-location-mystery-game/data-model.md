@@ -54,7 +54,7 @@ Spotは4件。現地測量完了まで座標、半径、安全停止文言を仮
 - `hints`: 順序付き3件
 - `explanation`, `partId`, `completionEventId`
 
-Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1素材はTODO完了まで仮素材を使用する。
+Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1は最終図版、博士の日記、3段階ヒント、解説を使用し、公開前に第三者の試解を完了する。
 
 ### Part
 
@@ -83,6 +83,26 @@ Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1素�
 
 集合項目は重複不可。座標、位置精度、回答入力履歴、誤答回数、分析履歴は保存しない。
 
+### RuntimeMode（実行時のみ）
+
+- `kind`: `development | offline-test | production`
+- `isLocal`: ホストが `localhost | 127.0.0.1 | [::1]` のいずれか
+- `offlineRequested`: クエリ値が厳密に `sw=1`
+- `offlineEnabled`: `offline-test` または `production` の場合だけtrue
+- `cleanupRequired`: `development` の場合だけtrue
+
+RuntimeModeは起動URLから毎回導出し、JSON、PlayerState、`localStorage`には保存しない。非ローカル環境ではクエリによる無効化を許可せず常に `production` とする。
+
+### OfflineCleanupResult（実行時のみ）
+
+- `registrationFound`, `unregistered`
+- `deletedCacheNames`: `mira-signal-` 接頭辞に一致して削除した名前
+- `controllerStillActive`: 登録解除後も現在のページが旧制御下にあるか
+- `reloadRequired`: 制御解除を次の読込へ反映するための自動再読込が必要か
+- `errors`: 登録解除またはキャッシュ整理に失敗した項目
+
+整理対象は現在のアプリスコープのService Worker登録と同一オリジン内の専用接頭辞キャッシュだけとする。PlayerStateの保存キーと他のキャッシュは参照・変更しない。自動再読込はセッション内で1回に制限し、失敗または再読込ループを検出した場合は開発者向けエラーを提示する。
+
 ### AudioQueue（実行時のみ）
 
 - `activeClipId`, `activePositionSeconds`
@@ -97,6 +117,7 @@ Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1素�
 - Chapter 1 → 多 AudioClip、0または1 Spot、0または1 Puzzle
 - Spot 0または1 → 1 Puzzle、Puzzle 1 → 1 Part
 - PlayerState → ReleaseConfiguration.releaseIdおよび各Content ID
+- RuntimeModeはPlayerStateと独立し、モード切替で進行状態を変更しない
 - `releaseId` は設定、コンテンツ、素材一覧で一致する
 - 参照先のないID、重複ID、循環する章順、Partの重複付与は契約違反
 - 後続イベントは必要な章、地点、謎、パーツが完了済みの場合だけ発火する
@@ -119,6 +140,20 @@ not-started → preparing-assets → introduction → moving → arrived
 - `ending → completed`: 再生完了。再視聴では状態を巻き戻さない
 
 各遷移は「新状態生成 → 契約検証 → `localStorage` 保存 → 画面反映」の順で確定する。保存に失敗した場合は通知し、破損状態へ遷移しない。
+
+## Startup Mode Transitions
+
+```text
+起動URL判定
+├─ development → アプリ限定登録・キャッシュ整理
+│  ├─ 旧controllerあり → セッション内1回だけ自動再読込 → ネットワーク素材確認 → 起動
+│  ├─ 旧controllerなし → ネットワーク素材確認 → 起動
+│  └─ 整理失敗 → エラー表示・再試行
+├─ offline-test → 公開相当の登録・必須素材キャッシュ → 起動
+└─ production → 公開相当の登録・必須素材キャッシュ → 起動
+```
+
+通常開発の素材確認は必須パスの取得可否を検証するがCache Storageへ永続化しない。オフライン試験と本番は既存の必須／任意素材契約を使用する。
 
 ## Release Compatibility
 
