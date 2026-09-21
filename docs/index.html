@@ -36,9 +36,12 @@
     .mystery-banner .button-outline:hover{box-shadow:0 12px 28px rgba(0,0,0,.36)}
     .section,.mystery-banner{border-top:0!important;border-bottom:0!important}
     .experience-grid a:nth-child(1){order:1}.experience-grid a:nth-child(3){order:2}.experience-grid a:nth-child(4){order:3}.experience-grid a:nth-child(2){order:4}
-    .illumination-grid .moon-shape,.illumination-grid .water-lines{inset:0;width:auto;height:auto;left:0;bottom:0;border-radius:0;opacity:.62;background-position:center;background-size:cover;box-shadow:none}
-    .illumination-grid .moon-shape{background-image:linear-gradient(rgba(5,18,48,.22),rgba(5,18,48,.55)),url("assets/img/garden_lightup_karesansui.png")}
-    .illumination-grid .water-lines{background-image:linear-gradient(rgba(5,18,48,.22),rgba(5,18,48,.55)),url("assets/img/garden_lightup_pond.png")}
+    .illumination-grid .moon-shape,.illumination-grid .water-lines{inset:0;width:auto;height:auto;left:0;bottom:0;border-radius:0;opacity:1;box-shadow:none}
+    .illumination-grid .moon-shape{background:linear-gradient(90deg,rgba(5,16,39,.78) 0 48%,rgba(7,23,52,.28) 82%),repeating-radial-gradient(ellipse 65% 28% at 22% 82%,transparent 0 17px,rgba(161,202,220,.16) 18px 20px,transparent 21px 34px),repeating-radial-gradient(ellipse 72% 31% at 58% 76%,transparent 0 21px,rgba(231,189,101,.11) 22px 24px,transparent 25px 42px),repeating-radial-gradient(ellipse 62% 26% at 90% 88%,transparent 0 15px,rgba(145,190,215,.14) 16px 18px,transparent 19px 32px),linear-gradient(145deg,#102a57,#061431 72%)}
+    .illumination-grid .moon-shape:after{content:"";position:absolute;width:128px;height:128px;left:auto;right:22px;top:50%;bottom:auto;margin-top:-64px;border-radius:50%;background:radial-gradient(circle at 38% 34%,#fff9dd 0,#dce8ed 45%,#90a9bd 76%,rgba(93,125,150,.18) 77%);box-shadow:0 0 28px rgba(207,229,238,.42);animation:pulse 7s ease-in-out infinite}
+    .illumination-grid .water-lines{background:radial-gradient(ellipse at 72% 66%,rgba(255,248,218,.62) 0 2%,rgba(163,210,231,.2) 7%,transparent 27%),linear-gradient(155deg,transparent 38%,rgba(92,167,204,.18) 62%,transparent 63%),linear-gradient(145deg,#102c58,#061631 68%)}
+    .illumination-grid .water-lines:after{content:"";position:absolute;inset:48% -15% -20%;background:repeating-radial-gradient(ellipse at 70% 18%,transparent 0 13px,rgba(153,207,228,.23) 14px 15px,transparent 16px 28px);transform:perspective(420px) rotateX(58deg);transform-origin:center top;animation:water-drift 8s ease-in-out infinite alternate}
+    @keyframes water-drift{from{transform:perspective(420px) rotateX(58deg) translateX(-12px)}to{transform:perspective(420px) rotateX(58deg) translateX(12px)}}
     .detail-panel a{display:block;width:max-content;margin:16px auto 0;padding:11px 24px;background:var(--gold);color:var(--navy);font-weight:bold;text-decoration:none;box-shadow:0 8px 24px rgba(0,0,0,.24);transition:transform .2s,box-shadow .2s}
     .detail-panel a:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(0,0,0,.36)}
   </style>
