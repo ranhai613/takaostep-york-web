@@ -9,14 +9,14 @@ const parts = [
   { id: 'part-i', displayText: 'I' }
 ];
 
-test('header progress reveals each canonical part slot as it is collected', () => {
-  assert.equal(formatPartProgress(parts, []), '?/?/?/?');
-  assert.equal(formatPartProgress(parts, ['part-r']), 'R/?/?/?');
-  assert.equal(formatPartProgress(parts, ['part-r', 'part-a']), 'R/A/?/?');
-  assert.equal(formatPartProgress(parts, ['part-r', 'part-a', 'part-m']), 'R/A/M/?');
-  assert.equal(formatPartProgress(parts, ['part-r', 'part-a', 'part-m', 'part-i']), 'R/A/M/I');
+test('header progress reports only the number of recovered parts', () => {
+  assert.equal(formatPartProgress(parts, []), '0/4');
+  assert.equal(formatPartProgress(parts, ['part-r']), '1/4');
+  assert.equal(formatPartProgress(parts, ['part-r', 'part-a']), '2/4');
+  assert.equal(formatPartProgress(parts, ['part-r', 'part-a', 'part-m']), '3/4');
+  assert.equal(formatPartProgress(parts, ['part-r', 'part-a', 'part-m', 'part-i']), '4/4');
 });
 
-test('header progress uses canonical slots rather than collection array order', () => {
-  assert.equal(formatPartProgress(parts, ['part-m', 'part-r']), 'R/?/M/?');
+test('header progress is independent of collection order', () => {
+  assert.equal(formatPartProgress(parts, ['part-m', 'part-r']), '2/4');
 });

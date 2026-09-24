@@ -66,6 +66,7 @@ export function validateContent(content) {
   }
   const letters = content.parts?.map(item => item.displayText) ?? [];
   if (!unique(letters) || [...letters].sort().join('') !== 'AIMR') errors.push('content.parts must uniquely provide R/A/M/I');
+  if (!content.parts?.every(part => present(part.image) && present(part.altText))) errors.push('content.parts require image and altText');
   for (const audio of content.audioClips ?? []) {
     if (!chapterIds.has(audio.chapterId)) errors.push(`audio ${audio.id} chapterId is missing`);
     if (!['main','bridge','system','effect','bgm'].includes(audio.kind) || typeof audio.src !== 'string' || typeof audio.subtitle !== 'string') errors.push(`audio ${audio.id} is invalid`);

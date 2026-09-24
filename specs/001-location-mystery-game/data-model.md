@@ -58,7 +58,7 @@ Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1は�
 
 ### Part
 
-- `id`, `displayText`, `unlockEventId`
+- `id`, `displayText`, `unlockEventId`（`displayText` は判定用の内部識別子であり、通常UIでは文字として表示しない）
 - `image`, `effectAudio`
 
 4件の表示文字はR、A、M、I。重複取得を許可しない。
@@ -78,7 +78,7 @@ Q1〜Q3はtext、Q4はreorder。誤答回数は進行条件にしない。Q1は�
 - `completedEventIds`, `reachedSpotIds`, `solvedPuzzleIds`
 - `viewedHintIds`, `collectedPartIds`, `listenedAudioIds`
 - `audioProgress`: クリップIDと再開秒数
-- `q4Order`: 現在の4文字順
+- `q4Order`: 現在の4つの船体パーツの接続順
 - `endingSeen`, `updatedAt`
 
 集合項目は重複不可。座標、位置精度、回答入力履歴、誤答回数、分析履歴は保存しない。

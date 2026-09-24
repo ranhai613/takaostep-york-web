@@ -14,6 +14,7 @@
     "./js/main.js",
     "./js/core/answer-normalizer.js",
     "./js/core/content-validator.js",
+    "./js/core/conversation-log.js",
     "./js/core/dialogue-flow.js",
     "./js/core/game-state.js",
     "./js/core/runtime-mode.js",
@@ -24,6 +25,7 @@
     "./js/services/offline-control.js",
     "./js/services/storage.js",
     "./js/ui/map-view.js",
+    "./js/ui/call-island.js",
     "./js/ui/renderer.js",
     "./js/ui/screens.js",
     "./data/release-config.json",
@@ -33,12 +35,13 @@
     "./assets/icons/icon.svg",
     "./assets/images/puzzles/q1.jpg",
     "./assets/images/puzzles/q3-morse-code.jpg",
-    "./assets/images/parts/r.svg",
-    "./assets/images/parts/a.svg",
-    "./assets/images/parts/m.svg",
-    "./assets/images/parts/i.svg"
+    "./assets/images/parts/scrap_R.png",
+    "./assets/images/parts/scrap_A.png",
+    "./assets/images/parts/scrap_M.png",
+    "./assets/images/parts/scrap_I.png"
   ],
   "optional": [
+    "./assets/audio/sfx/電話の呼び出し音.mp3",
     "./assets/audio/silence-10s.mp3",
     "./assets/audio/……聞こえる！？ よかった、通信がつながった！ その端末を拾ってくれた地球人だよね。...地球人、改めてよろしくね。.mp3",
     "./assets/audio/君たちは、この場所を「高尾山」って呼んでるんだよね。...なんだか不思議だね。.mp3",

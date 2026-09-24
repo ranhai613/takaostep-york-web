@@ -16,8 +16,22 @@
   <div class="app-shell">
     <header class="topbar">
       <div class="brand"><span aria-hidden="true">✦</span><span>MIRA SIGNAL</span></div>
-      <button id="status-button" class="icon-button" type="button" aria-label="進行状況を表示。回収パーツ ?/?/?/?">?/?/?/?</button>
+      <div class="header-actions">
+        <button id="conversation-button" class="icon-button" type="button" disabled>会話を振り返る</button>
+        <button id="status-button" class="icon-button" type="button" aria-label="進行状況を表示。回収パーツ 0/4">PARTS 0/4</button>
+      </div>
     </header>
+    <div id="call-island" class="call-island-wrap" role="group" aria-label="ミラとの通話" hidden>
+      <div class="call-island">
+        <span class="call-avatar" aria-hidden="true">✦</span>
+        <div class="call-details"><strong>ミラ</strong><time id="call-duration" aria-label="通話時間">00:00</time></div>
+        <div class="call-controls">
+          <button id="call-toggle" class="call-icon-button" type="button" aria-label="再生を一時停止" title="一時停止" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path class="call-pause-shape" d="M6 4h4v16H6zm8 0h4v16h-4z"/><path class="call-play-shape" d="M6 3.8v16.4L20 12z"/></svg></button>
+          <button id="call-rewind" class="call-icon-button" type="button" aria-label="10秒戻す" title="10秒戻す" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v6h6"/><path d="M4.8 11a7.5 7.5 0 1 1 .3 4.1"/><text x="12" y="16" text-anchor="middle">10</text></svg></button>
+          <button id="call-restart" class="call-icon-button" type="button" aria-label="最初から再生" title="最初から再生" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5v6h6"/><path d="M4.8 11a7.5 7.5 0 1 1 .3 4.1"/><path d="m10 9 5 3-5 3z" class="call-restart-play"/></svg></button>
+        </div>
+      </div>
+    </div>
     <div id="offline-banner" class="banner" hidden>オフラインです。保存済み素材で進行できます。</div>
     <main id="screen" tabindex="-1" aria-busy="true">
       <section class="loading-screen" aria-labelledby="loading-title">

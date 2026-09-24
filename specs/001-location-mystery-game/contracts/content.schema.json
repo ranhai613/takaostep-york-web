@@ -86,12 +86,13 @@
     "part": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "displayText", "unlockEventId", "image", "effectAudio"],
+      "required": ["id", "displayText", "unlockEventId", "image", "altText", "effectAudio"],
       "properties": {
         "id": { "$ref": "#/$defs/id" },
         "displayText": { "enum": ["R", "A", "M", "I"] },
         "unlockEventId": { "$ref": "#/$defs/id" },
         "image": { "type": "string" },
+        "altText": { "type": "string", "minLength": 1 },
         "effectAudio": { "type": "string" }
       }
     }

@@ -32,3 +32,12 @@ test('dialogue triggers follow the four route sections and final authentication'
   }
   assert.equal(content.audioClips.find(clip => clip.id === 'audio-final-connection').triggerEventId, 'spot-4-arrived');
 });
+
+test('incoming ringtone has a separate BGM slot that can be assigned later', async () => {
+  const content = await loadContent();
+  const ring = content.audioClips.find(clip => clip.id === 'audio-incoming-ring');
+  assert.ok(ring);
+  assert.equal(ring.kind, 'bgm');
+  assert.equal(ring.triggerEventId, 'terminal-picked-up');
+  assert.equal(typeof ring.src, 'string');
+});

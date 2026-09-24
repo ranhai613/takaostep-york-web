@@ -14,6 +14,8 @@ test('published data has matching releases and valid references', async () => {
   assert.ok(content.spots.every(spot => spot.fallbackMode === 'player-confirmation'));
   const registeredAssets=new Set([...assets.required,...assets.optional]);
   assert.ok(content.audioClips.filter(clip=>clip.src).every(clip=>registeredAssets.has(clip.src)),'every assigned audio source must be registered in the asset manifest');
+  assert.ok(content.parts.every(part=>/\/scrap_[RAMI]\.png$/u.test(part.image)),'parts must use the scrap artwork');
+  assert.ok(content.parts.every(part=>registeredAssets.has(part.image)),'every part image must be registered in the asset manifest');
 });
 
 test('duplicate IDs and broken references are rejected', async () => {

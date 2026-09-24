@@ -1,5 +1,6 @@
 import { validateAll, assertValid } from './core/content-validator.js';
 import { getPuzzleBriefingClip, getPuzzleBriefingEventId, getTravelClips } from './core/dialogue-flow.js';
+import { getConversationLog } from './core/conversation-log.js';
 import { createInitialState, reducePlayerState } from './core/game-state.js';
 import { resolveRuntimeMode } from './core/runtime-mode.js';
 import { transition } from './core/state-machine.js';
@@ -11,7 +12,8 @@ import { AudioQueue } from './services/audio-queue.js';
 import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
-import { showDevicePickup, showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
+import { createCallIsland } from './ui/call-island.js';
+import { showDevicePickup, showIncomingCall, showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
 
 const renderer=new Renderer();
 const store=createStateStore();
@@ -20,15 +22,58 @@ const runtimeMode=resolveRuntimeMode({hostname:location.hostname,search:location
 let release,assets,content,state,savedResult;
 let locationWatcher;
 let selectedLetter=null;
+let incomingRingAudio=null;
+let callStartedAt=0;
+const callIsland=createCallIsland(document.querySelector('#call-island'),{
+  onToggle:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio(audioQueue.audio?.paused?'play':'pause',[clip]);else{const clips=availableCallClips();if(clips.length)handleAudio('play',clips)}},
+  onRewind:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio('rewind',[clip])},
+  onRestart:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio('restart',[clip])}
+});
+
+function availableCallClips(){
+  if(!state||!content)return [];
+  if(state.currentSceneId==='s03')return [clipById('audio-intro')].filter(clip=>clip?.src);
+  if(state.currentSceneId==='s04'){
+    const spot=currentSpot(),trigger=spot.order===1?'intro-completed':`q${spot.order-1}-solved`;
+    return getTravelClips(content.audioClips,trigger).filter(clip=>clip.src);
+  }
+  if(['s05','s06'].includes(state.currentSceneId)){
+    const order=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);
+    return [getPuzzleBriefingClip(content.audioClips,order)].filter(clip=>clip?.src);
+  }
+  return [];
+}
+function syncCallPlayback(){
+  const active=Boolean(audioQueue.activeClip?.src);
+  callIsland.updatePlayback({canToggle:active||availableCallClips().length>0,canSeek:active,playing:Boolean(active&&!audioQueue.audio?.paused)});
+}
+function syncCallVisibility(){
+  const active=state&&['s03','s04','s05','s06','s07','s08','s09','s10'].includes(state.currentSceneId);
+  const key=`mira-call-started-at:${release?.releaseId??'unknown'}`;
+  if(!active){callIsland.hide();if(state&&['s00','s01','s02'].includes(state.currentSceneId)){callStartedAt=0;try{localStorage.removeItem(key)}catch{}}return}
+  if(!callStartedAt){
+    try{const saved=Number(localStorage.getItem(key));if(Number.isFinite(saved)&&saved>0&&saved<=Date.now())callStartedAt=saved}catch{}
+    if(!callStartedAt){callStartedAt=Date.now();try{localStorage.setItem(key,String(callStartedAt))}catch{}}
+  }
+  callIsland.show(callStartedAt);
+  syncCallPlayback();
+}
 
 const fetchJson=async path=>{const response=await fetch(path,{cache:'no-store'});if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response.json()};
 const clipById=id=>content.audioClips.find(clip=>clip.id===id);
+function startIncomingRing(){
+  const source=clipById('audio-incoming-ring')?.src;
+  if(!source)return;
+  if(!incomingRingAudio||incomingRingAudio.src!==new URL(source,document.baseURI).href){incomingRingAudio?.pause();incomingRingAudio=new Audio(source);incomingRingAudio.loop=true;incomingRingAudio.volume=.35}
+  if(incomingRingAudio.paused)incomingRingAudio.play().catch(()=>renderer.announce('着信音を再生できません。通話開始はそのまま押せます。'));
+}
+function stopIncomingRing(){if(incomingRingAudio){incomingRingAudio.pause();incomingRingAudio.currentTime=0}}
 const playbackPriority=clip=>clip.kind==='main'?20000+(clip.priority??0):clip.kind==='bridge'?10000+(clip.priority??0):(clip.priority??0);
 const travelDelayClip=clip=>({id:`system-travel-delay-${clip.id}`,kind:'system',src:'./assets/audio/silence-10s.mp3',subtitle:'',priority:0,transient:true});
 const audioQueue=new AudioQueue({
-  onSubtitle:(subtitle)=>{const box=document.querySelector('.subtitle');if(box&&subtitle)box.textContent=subtitle},
+  onSubtitle:(subtitle)=>{const box=document.querySelector('.subtitle-panel .subtitle');if(box&&subtitle)box.textContent=subtitle},
   onProgress:(clip,seconds)=>{if(!clip||clip.transient||!state)return;commit(reducePlayerState(state,{type:'audio-progress',audioId:clip.id,seconds}),{render:false})},
-  onStatus:({status,clip})=>{if(status==='failed')renderer.announce('音声の自動再生がブロックされました。「通信を再生」を押してください。');if(status==='ended'&&clip&&!clip.transient&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
+  onStatus:({status,clip})=>{syncCallPlayback();if(status==='failed')renderer.announce('音声を再生できませんでした。字幕を開くか、会話ログで内容を確認できます。');if(status==='ended'&&clip&&!clip.transient&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 });
 
 function commit(next,{render=true}={}){
@@ -37,17 +82,24 @@ function commit(next,{render=true}={}){
 
 function runTransition(event,{render=true}={}){try{return commit(transition(state,event),{render})}catch(error){console.warn(error);renderer.announce(error.message);return false}}
 function inventory(){return renderer.inventory(content.parts,state.collectedPartIds)}
-function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'?/?/?/?';button.textContent=progress;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`)}
+function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'0/4';button.textContent=`PARTS ${progress}`;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`);document.querySelector('#conversation-button').disabled=!(content&&state)}
 function currentSpot(){return [...content.spots].sort((a,b)=>a.order-b.order)[Math.min(state.solvedPuzzleIds.filter(id=>id!=='q4').length,3)]}
 function hintCount(puzzle){return state.viewedHintIds.filter(id=>id.startsWith(`${puzzle.id}-hint-`)).length}
 
 function renderState(){
   updateStatusButton();
+  syncCallVisibility();
   mapView.destroy();locationWatcher?.stop();
   if(state.endingSeen&&state.currentSceneId==='completed'){renderer.showMemorial(content.parts,()=>renderer.showEnding(clipById('audio-ending').subtitle,()=>renderState()));return}
   if(state.currentSceneId==='s00'){showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});return}
-  if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){showDevicePickup(renderer,{onPickup:()=>commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))});return}
-  if(['s01','s02','s03'].includes(state.currentSceneId)){const intro=clipById('audio-intro');showIntro(renderer,{step:state.currentSceneId,clip:intro,onAudioTest:async()=>{await audioQueue.unlock();renderer.tone();renderer.announce('確認音を再生しました')},onAudio:action=>handleAudio(action,[intro]),onSubtitle:()=>{audioQueue.clear();commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}))},onNext:async()=>{if(state.currentSceneId==='s01')commit(reducePlayerState(state,{type:'navigate',sceneId:'s02'}));else if(state.currentSceneId==='s02'){commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'}));await handleAudio('play',[intro])}else if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay()}});return}
+  if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){showDevicePickup(renderer,{onTap:startIncomingRing,onPickup:()=>commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))});return}
+  if(['s01','s02'].includes(state.currentSceneId)){
+    const intro=clipById('audio-intro');
+    showIncomingCall(renderer,{ringAvailable:Boolean(clipById('audio-incoming-ring')?.src),onRingReplay:startIncomingRing,onAnswer:()=>{stopIncomingRing();audioQueue.clear();if(commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'})))handleAudio('play',[intro])}});
+    startIncomingRing();
+    return;
+  }
+  if(state.currentSceneId==='s03'){showIntro(renderer,{clip:clipById('audio-intro'),onNext:()=>{if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay()}});return}
   if(state.currentSceneId==='s04'){renderTravel();return}
   if(['s05','s06'].includes(state.currentSceneId)){renderPuzzleScreen();return}
   if(state.currentSceneId==='s07'){const puzzle=content.puzzles.find(item=>state.solvedPuzzleIds.includes(item.id)&&!state.completedEventIds.includes(`${item.id}-continued`))??content.puzzles[Math.max(0,state.solvedPuzzleIds.length-1)];const part=content.parts.find(item=>item.id===puzzle.partId);renderer.showPartAcquired(part,puzzle,inventory(),()=>{let next=reducePlayerState(state,{type:'complete-event',id:`${puzzle.id}-continued`});next=transition(next,{type:'advance-after-part'});if(commit(next))startTravelAudioWithDelay()});return}
@@ -60,8 +112,9 @@ function renderTravel(){
   const spot=currentSpot(),index=spot.order;
   const trigger=index===1?'intro-completed':`q${index-1}-solved`;
   const routeClips=getTravelClips(content.audioClips,trigger);
-  showTravel(renderer,{spot,index,inventory:inventory(),subtitle:routeClips[0]?.subtitle??'',onArrive:()=>arriveAt(spot),onLocation:()=>startLocation(spot),onAudio:action=>handleAudio(action,routeClips)});
+  showTravel(renderer,{spot,index,inventory:inventory(),subtitle:routeClips[0]?.subtitle??'',onArrive:()=>arriveAt(spot),onLocation:()=>startLocation(spot)});
   mapView.mount(document.querySelector('#map'),spot,release.map);
+  startLocation(spot);
 }
 
 function startTravelAudioWithDelay(){
@@ -71,8 +124,10 @@ function startTravelAudioWithDelay(){
 }
 
 function startLocation(spot){
+  locationWatcher?.stop();
   const status=document.querySelector('#location-status');
-  locationWatcher=new LocationWatcher({onPosition:result=>{mapView.updatePosition({lat:result.lat,lng:result.lng});status.textContent=result.accuracyWarning?`精度が低いため確認中（誤差 約${Math.round(result.accuracyM)}m）`:`目的地点まで約${Math.round(result.distanceM)}m`;if(result.arrived)arriveAt(spot)},onStatus:event=>{const labels={requesting:'位置情報の許可を確認しています…','permission-denied':'位置情報が拒否されました。到着ボタンで進めます。',unavailable:'位置情報を取得できません。到着ボタンで進めます。',timeout:'位置情報がタイムアウトしました。到着ボタンで進めます。',unsupported:'このブラウザでは位置情報を使えません。到着ボタンで進めます。'};if(labels[event.status])status.textContent=labels[event.status]}});
+  const fallback='下の「位置情報が上手く動かない場合」を開くと、手動で進めます。';
+  locationWatcher=new LocationWatcher({onPosition:result=>{mapView.updatePosition({lat:result.lat,lng:result.lng});status.textContent=result.accuracyWarning?`精度が低いため確認中（誤差 約${Math.round(result.accuracyM)}m）。${fallback}`:`目的地点まで約${Math.round(result.distanceM)}m`;if(result.arrived)arriveAt(spot)},onStatus:event=>{const labels={requesting:'位置情報の許可を確認しています…','permission-denied':`位置情報が拒否されました。${fallback}`,unavailable:`位置情報を取得できません。${fallback}`,timeout:`位置情報がタイムアウトしました。${fallback}`,unsupported:`このブラウザでは位置情報を使えません。${fallback}`,error:`位置情報を確認できません。${fallback}`};if(labels[event.status])status.textContent=labels[event.status]}});
   locationWatcher.start(spot);
 }
 
@@ -92,7 +147,7 @@ async function handleAudio(action,clips){
   }else for(const clip of candidates)audioQueue.enqueue(clip);
   const clip=await audioQueue.playNext();
   if(action==='restart')renderer.announce('最初から再生します');else if(action==='delayed-play')renderer.announce('10秒後に通信を再生します');
-  if(clip&&!clip.src){renderer.announce('音声素材は準備中です。全文字幕を表示しています。');commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
+  if(clip&&!clip.src){renderer.announce('音声素材は準備中です。字幕を開くか、会話ログで内容を確認できます。');commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 }
 
 function renderPuzzleScreen(){
@@ -100,7 +155,7 @@ function renderPuzzleScreen(){
   const briefing=getPuzzleBriefingClip(content.audioClips,puzzle.order);
   const briefingEventId=getPuzzleBriefingEventId(puzzle.id);
   if(briefing&&!state.completedEventIds.includes(briefingEventId)){
-    showPuzzleBriefing(renderer,{puzzle,clip:briefing,onAudio:action=>handleAudio(action,[briefing]),onContinue:()=>{audioQueue.clear();let next=reducePlayerState(state,{type:'audio-listened',audioId:briefing.id});next=reducePlayerState(next,{type:'complete-event',id:briefingEventId});commit(next)}});
+    showPuzzleBriefing(renderer,{puzzle,clip:briefing,onContinue:()=>{audioQueue.clear();let next=reducePlayerState(state,{type:'audio-listened',audioId:briefing.id});next=reducePlayerState(next,{type:'complete-event',id:briefingEventId});commit(next)}});
     handleAudio('priority-play',[briefing]);
     return;
   }
@@ -110,7 +165,7 @@ function renderPuzzleScreen(){
 function renderFinal(){
   const puzzle=content.puzzles.find(item=>item.id==='q4');
   const finalConnection=content.audioClips.find(clip=>clip.id==='audio-final-connection');
-  showFinal(renderer,{puzzle,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),onSelect:index=>{if(selectedLetter===null){selectedLetter=index;return {order:state.q4Order,selected:selectedLetter}}if(selectedLetter===index){selectedLetter=null;return {order:state.q4Order,selected:selectedLetter}}const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}),{render:false});return {order:state.q4Order,selected:selectedLetter}},onSubmit:feedback=>{if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}runTransition({type:'authenticate-final'})},onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})});
+  showFinal(renderer,{puzzle,parts:content.parts,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),onSelect:index=>{if(selectedLetter===null){selectedLetter=index;return {order:state.q4Order,selected:selectedLetter}}if(selectedLetter===index){selectedLetter=null;return {order:state.q4Order,selected:selectedLetter}}const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}),{render:false});return {order:state.q4Order,selected:selectedLetter}},onSubmit:feedback=>{if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}runTransition({type:'authenticate-final'})},onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})});
 }
 
 function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}
@@ -145,10 +200,11 @@ async function bootstrap(){
     const profile=await loadTestProfile();savedResult=profile?{status:'test',state:profile}:store.load(release);
     if(['corrupt','incompatible'].includes(savedResult.status)){offerFreshStart(savedResult.status==='corrupt'?'保存データが破損しています。削除せず保持しています。':'公開版との互換性を確認できません。旧状態は削除せず保持しています。');return}
     if(savedResult.state){state=savedResult.state;updateStatusButton();showPreparation(renderer,{hasSaved:true,onContinue:renderState,onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})});return}
-    state=createInitialState(release.releaseId);showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});
+    state=createInitialState(release.releaseId);updateStatusButton();showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});
   }catch(error){console.error(error);showFatal(renderer,'ゲームを起動できません',error.message,()=>location.reload())}
 }
 
 document.querySelector('#status-button').addEventListener('click',()=>{if(!state||!content)return;renderer.showDialog({title:'現在の進行',body:`${inventory()}<p>章：${escapeHtml(content.chapters.find(chapter=>chapter.id===state.chapterId)?.title??state.chapterId)}</p><p>完了した謎：${state.solvedPuzzleIds.length} / 4</p>`,confirmText:'閉じる',cancelText:''})});
+document.querySelector('#conversation-button').addEventListener('click',()=>{if(!state||!content)return;renderer.showConversationLog(getConversationLog(content.audioClips,state))});
 const offline=document.querySelector('#offline-banner');const updateOnline=()=>{offline.hidden=navigator.onLine};addEventListener('online',updateOnline);addEventListener('offline',updateOnline);updateOnline();
 bootstrap();
