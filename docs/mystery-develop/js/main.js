@@ -1,11 +1,12 @@
 import { validateAll, assertValid } from './core/content-validator.js';
 import { getPuzzleBriefingClip, getPuzzleBriefingEventId, getTravelClips } from './core/dialogue-flow.js';
 import { getConversationLog } from './core/conversation-log.js';
+import { DEBUG_STAGES, buildDebugState, debugStageForState, showDebugControls } from './core/debug-progress.js';
 import { createInitialState, reducePlayerState } from './core/game-state.js';
 import { resolveRuntimeMode } from './core/runtime-mode.js';
 import { transition } from './core/state-machine.js';
 import { isAcceptedAnswer } from './core/answer-normalizer.js';
-import { createStateStore } from './services/storage.js';
+import { createStateStore, PLAYER_STATE_KEY } from './services/storage.js';
 import { prepareAssets, cleanupStaleCaches } from './services/asset-preloader.js';
 import { cleanupDevelopmentOfflineState, clearDevelopmentReloadGuard } from './services/offline-control.js';
 import { AudioQueue } from './services/audio-queue.js';
@@ -16,15 +17,26 @@ import { createCallIsland } from './ui/call-island.js';
 import { showDevicePickup, showIncomingCall, showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
 
 const renderer=new Renderer();
-const store=createStateStore();
 const mapView=new MapView({onTileError:message=>renderer.announce(message)});
 const runtimeMode=resolveRuntimeMode({hostname:location.hostname,search:location.search});
-let release,assets,content,state,savedResult;
+let release,assets,content,state,savedResult,store;
+let developerMode=false;
+let debugJumpRevision=0;
 let locationWatcher;
+let arrivalRenderTimer=null;
 let selectedLetter=null;
 let incomingRingAudio=null;
 let incomingRingFailed=false;
 let callStartedAt=0;
+renderer.screen.addEventListener('submit',event=>{
+  if(event.target.id!=='answer-form'||!state||!content)return;
+  const index=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);
+  const puzzle=content.puzzles.find(item=>item.order===index);
+  if(puzzle&&isAcceptedAnswer(new FormData(event.target).get('answer'),puzzle.acceptedAnswers,puzzle.normalizationRules))renderer.playTransitionSound();
+},true);
+renderer.screen.addEventListener('click',event=>{
+  if(event.target.closest('#final-submit')&&state?.q4Order.join('')==='MIRA')renderer.playTransitionSound();
+},true);
 const callIsland=createCallIsland(document.querySelector('#call-island'),{
   onToggle:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio(audioQueue.audio?.paused?'play':'pause',[clip]);else{const clips=availableCallClips();if(clips.length)handleAudio('play',clips)}},
   onRewind:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio('rewind',[clip])},
@@ -42,6 +54,7 @@ function availableCallClips(){
     const order=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);
     return [getPuzzleBriefingClip(content.audioClips,order)].filter(clip=>clip?.src);
   }
+  if(state.currentSceneId==='s10')return [clipById('audio-ending')].filter(clip=>clip?.src);
   return [];
 }
 function syncCallPlayback(){
@@ -50,7 +63,7 @@ function syncCallPlayback(){
 }
 function syncCallVisibility(){
   const active=state&&['s03','s04','s05','s06','s07','s08','s09','s10'].includes(state.currentSceneId);
-  const key=`mira-call-started-at:${release?.releaseId??'unknown'}`;
+  const key=callStartStorageKey();
   if(!active){callIsland.hide();if(state&&['s00','s01','s02'].includes(state.currentSceneId)){callStartedAt=0;try{localStorage.removeItem(key)}catch{}}return}
   if(!callStartedAt){
     try{const saved=Number(localStorage.getItem(key));if(Number.isFinite(saved)&&saved>0&&saved<=Date.now())callStartedAt=saved}catch{}
@@ -61,6 +74,7 @@ function syncCallVisibility(){
 }
 
 const fetchJson=async path=>{const response=await fetch(path,{cache:'no-store'});if(!response.ok)throw new Error(`${path}: HTTP ${response.status}`);return response.json()};
+const callStartStorageKey=()=>`mira-call-started-at:${release?.releaseId??'unknown'}${developerMode?':debug':''}`;
 const clipById=id=>content.audioClips.find(clip=>clip.id===id);
 function startIncomingRing(){
   const source=clipById('audio-incoming-ring')?.src;
@@ -82,8 +96,33 @@ function commit(next,{render=true}={}){
 }
 
 function runTransition(event,{render=true}={}){try{return commit(transition(state,event),{render})}catch(error){console.warn(error);renderer.announce(error.message);return false}}
+function jumpToDebugStage(stageId){
+  if(!developerMode)return;
+  try{
+    const next=buildDebugState(release.releaseId,stageId);
+    stopIncomingRing();
+    audioQueue.clear();
+    locationWatcher?.stop();
+    if(arrivalRenderTimer!==null){clearTimeout(arrivalRenderTimer);arrivalRenderTimer=null}
+    document.querySelectorAll('.repair-whiteout, .pickup-white-in').forEach(element=>element.remove());
+    try{localStorage.removeItem(callStartStorageKey())}catch{}
+    callStartedAt=0;
+    selectedLetter=null;
+    debugJumpRevision++;
+    commit(next);
+  }catch(error){console.error(error);renderer.announce('画面ジャンプに失敗しました。進行状態を確認してください。')}
+}
+function openDebugMenu(){
+  if(!developerMode||!state)return;
+  const current=debugStageForState(state);
+  const options=DEBUG_STAGES.map(stage=>`<option value="${escapeHtml(stage.id)}"${stage.id===current?' selected':''}>${escapeHtml(stage.label)}</option>`).join('');
+  let dialog;
+  dialog=renderer.showDialog({title:'開発用画面ジャンプ',body:`<label class="debug-panel-label" for="debug-stage">移動先</label><select id="debug-stage" class="debug-stage-select">${options}</select><p class="debug-panel-note">選択した段階の進行状態に置き換えます。通常プレイの保存データは変更しません。</p>`,confirmText:'この段階へ移動',cancelText:'閉じる',transitionSound:true,onConfirm:()=>jumpToDebugStage(dialog.querySelector('#debug-stage').value)});
+  dialog.classList.add('debug-dialog');
+  dialog.querySelector('#debug-stage').focus();
+}
 function inventory(){return renderer.inventory(content.parts,state.collectedPartIds)}
-function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'0/4';button.textContent=`PARTS ${progress}`;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`);document.querySelector('#conversation-button').disabled=!(content&&state)}
+function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'0/4';button.textContent=`PARTS ${progress}`;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`);document.querySelector('#conversation-button').disabled=!(content&&state);const debugButton=document.querySelector('#debug-button');debugButton.hidden=!(developerMode&&state);document.body.classList.toggle('debug-mode',!debugButton.hidden)}
 function currentSpot(){return [...content.spots].sort((a,b)=>a.order-b.order)[Math.min(state.solvedPuzzleIds.filter(id=>id!=='q4').length,3)]}
 function hintCount(puzzle){return state.viewedHintIds.filter(id=>id.startsWith(`${puzzle.id}-hint-`)).length}
 
@@ -93,7 +132,7 @@ function renderState(){
   mapView.destroy();locationWatcher?.stop();
   if(state.endingSeen&&state.currentSceneId==='completed'){renderer.showMemorial(content.parts,()=>renderer.showEnding(clipById('audio-ending').subtitle,()=>renderState()));return}
   if(state.currentSceneId==='s00'){showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});return}
-  if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){showDevicePickup(renderer,{onTap:startIncomingRing,onPickup:()=>commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))});return}
+  if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){const revision=debugJumpRevision;showDevicePickup(renderer,{onTap:startIncomingRing,onPickup:()=>{if(debugJumpRevision===revision)commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))}});return}
   if(['s01','s02'].includes(state.currentSceneId)){
     const intro=clipById('audio-intro');
     showIncomingCall(renderer,{ringAvailable:Boolean(clipById('audio-incoming-ring')?.src),ringFailed:incomingRingFailed,onRingReplay:startIncomingRing,onAnswer:()=>{stopIncomingRing();audioQueue.clear();if(commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'})))handleAudio('play',[intro])}});
@@ -104,7 +143,13 @@ function renderState(){
   if(state.currentSceneId==='s04'){renderTravel();return}
   if(['s05','s06'].includes(state.currentSceneId)){renderPuzzleScreen();return}
   if(state.currentSceneId==='s07'){const puzzle=content.puzzles.find(item=>state.solvedPuzzleIds.includes(item.id)&&!state.completedEventIds.includes(`${item.id}-continued`))??content.puzzles[Math.max(0,state.solvedPuzzleIds.length-1)];const part=content.parts.find(item=>item.id===puzzle.partId);renderer.showPartAcquired(part,puzzle,inventory(),()=>{let next=reducePlayerState(state,{type:'complete-event',id:`${puzzle.id}-continued`});next=transition(next,{type:'advance-after-part'});if(commit(next))startTravelAudioWithDelay()});return}
-  if(['s08','s09'].includes(state.currentSceneId)){renderFinal();return}
+  if(state.currentSceneId==='s08'){renderFinal();return}
+  if(state.currentSceneId==='s09'){
+    const revision=debugJumpRevision;
+    const orderedParts=state.q4Order.map(value=>content.parts.find(part=>part.displayText===value));
+    renderer.showRepairSequence(orderedParts,()=>{if(debugJumpRevision!==revision)return false;if(!runTransition({type:'complete-repair'}))return false;const ending=clipById('audio-ending');if(ending?.src)handleAudio('priority-play',[ending]);else renderer.tone(880,.22);return true});
+    return;
+  }
   if(state.currentSceneId==='s10'){renderer.showEnding(clipById('audio-ending').subtitle,()=>runTransition({type:'complete-ending'}));return}
   showFatal(renderer,'進行状態を読み取れません',`不明な画面ID: ${state.currentSceneId}`,()=>location.reload());
 }
@@ -132,7 +177,7 @@ function startLocation(spot){
   locationWatcher.start(spot);
 }
 
-function arriveAt(spot){if(state.reachedSpotIds.includes(spot.id))return;locationWatcher?.stop();if(runTransition({type:'arrive',spotId:spot.id},{render:false})){renderer.arrivalEffect();setTimeout(renderState,650)}}
+function arriveAt(spot){if(state.reachedSpotIds.includes(spot.id))return;locationWatcher?.stop();if(runTransition({type:'arrive',spotId:spot.id},{render:false})){renderer.arrivalEffect();arrivalRenderTimer=setTimeout(()=>{arrivalRenderTimer=null;renderState()},650)}}
 
 async function handleAudio(action,clips){
   if(action==='pause'){audioQueue.pause();return}if(action==='rewind'){const activeId=audioQueue.activeClip?.id;const target=audioQueue.rewind(10,activeId?state.audioProgress[activeId]:0);if(target===null){renderer.announce('再生中の音声がありません');return}if(activeId)commit(reducePlayerState(state,{type:'audio-progress',audioId:activeId,seconds:target}),{render:false});renderer.announce(target===0?'音声の先頭まで戻しました':`10秒戻しました。${Math.floor(target)}秒から再生します`);return}
@@ -166,10 +211,22 @@ function renderPuzzleScreen(){
 function renderFinal(){
   const puzzle=content.puzzles.find(item=>item.id==='q4');
   const finalConnection=content.audioClips.find(clip=>clip.id==='audio-final-connection');
-  showFinal(renderer,{puzzle,parts:content.parts,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),onSelect:index=>{if(selectedLetter===null){selectedLetter=index;return {order:state.q4Order,selected:selectedLetter}}if(selectedLetter===index){selectedLetter=null;return {order:state.q4Order,selected:selectedLetter}}const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}),{render:false});return {order:state.q4Order,selected:selectedLetter}},onSubmit:feedback=>{if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}runTransition({type:'authenticate-final'})},onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})});
+  showFinal(renderer,{
+    puzzle,parts:content.parts,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),
+    onSelect:index=>{
+      if(selectedLetter===null){selectedLetter=index;return {order:state.q4Order,selected:selectedLetter}}
+      if(selectedLetter===index){selectedLetter=null;return {order:state.q4Order,selected:selectedLetter}}
+      const from=selectedLetter;selectedLetter=null;commit(reducePlayerState(state,{type:'q4-swap',from,to:index}),{render:false});return {order:state.q4Order,selected:selectedLetter}
+    },
+    onSubmit:feedback=>{
+      if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}
+      audioQueue.clear();if(runTransition({type:'authenticate-final'}))syncCallPlayback();
+    },
+    onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})
+  });
 }
 
-function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}
+function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,transitionSound:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}
 
 async function registerServiceWorker(){if(!('serviceWorker'in navigator))return null;try{const registration=await navigator.serviceWorker.register('./service-worker.js');registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)renderer.announce('新しい公開版があります。安全な場所で再読込してください。')})});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!sessionStorage.getItem('mira-sw-controlled')){sessionStorage.setItem('mira-sw-controlled','1');location.reload()}});return registration}catch(error){console.warn('Service Worker registration failed',error);return null}}
 
@@ -192,6 +249,8 @@ async function bootstrap(){
       content.spots=content.spots.map(spot=>spot.id==='spot-4'?alternate.spot:spot);
     }
     assertValid(validateAll({release,assets,content},{production:runtimeMode.kind==='production'}));
+    developerMode=showDebugControls(runtimeMode,release);
+    store=createStateStore(globalThis.localStorage,developerMode?`${PLAYER_STATE_KEY}:debug`:PLAYER_STATE_KEY);
     if(runtimeMode.offlineEnabled)await registerServiceWorker();
     const progress=document.querySelector('#loading-progress'),detail=document.querySelector('#loading-detail');
     const persist=runtimeMode.offlineEnabled&&'caches'in globalThis;
@@ -200,12 +259,13 @@ async function bootstrap(){
     if(!prepared.ready){showAssetFailure(renderer,prepared,bootstrap);return}
     const profile=await loadTestProfile();savedResult=profile?{status:'test',state:profile}:store.load(release);
     if(['corrupt','incompatible'].includes(savedResult.status)){offerFreshStart(savedResult.status==='corrupt'?'保存データが破損しています。削除せず保持しています。':'公開版との互換性を確認できません。旧状態は削除せず保持しています。');return}
-    if(savedResult.state){state=savedResult.state;updateStatusButton();showPreparation(renderer,{hasSaved:true,onContinue:renderState,onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})});return}
+    if(savedResult.state){state=savedResult.state;updateStatusButton();showPreparation(renderer,{hasSaved:true,onContinue:renderState,onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,transitionSound:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})});return}
     state=createInitialState(release.releaseId);updateStatusButton();showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});
   }catch(error){console.error(error);showFatal(renderer,'ゲームを起動できません',error.message,()=>location.reload())}
 }
 
 document.querySelector('#status-button').addEventListener('click',()=>{if(!state||!content)return;renderer.showDialog({title:'現在の進行',body:`${inventory()}<p>章：${escapeHtml(content.chapters.find(chapter=>chapter.id===state.chapterId)?.title??state.chapterId)}</p><p>完了した謎：${state.solvedPuzzleIds.length} / 4</p>`,confirmText:'閉じる',cancelText:''})});
 document.querySelector('#conversation-button').addEventListener('click',()=>{if(!state||!content)return;renderer.showConversationLog(getConversationLog(content.audioClips,state))});
+document.querySelector('#debug-button').addEventListener('click',openDebugMenu);
 const offline=document.querySelector('#offline-banner');const updateOnline=()=>{offline.hidden=navigator.onLine};addEventListener('online',updateOnline);addEventListener('offline',updateOnline);updateOnline();
 bootstrap();

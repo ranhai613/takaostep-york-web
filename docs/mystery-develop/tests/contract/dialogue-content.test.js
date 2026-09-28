@@ -18,7 +18,7 @@ test('integrated dialogue covers every scripted story section', async () => {
 
   const dialogue = content.audioClips.map(clip => clip.subtitle).join('\n');
   for (const phrase of [
-    'その端末、絶対に捨てないで', '1オークエン', '高尾山', '天狗', '太陽風',
+    'その端末、絶対に捨てないで', '1オークエン', '高尾山', '天狗', '標高599メートル',
     '100光年', '北極星', '1234', 'モールス信号', 'HELLO', 'HOLES', '1817年',
     '31度', 'ミドリノヤツ', '登録操縦士情報', '少々お調子者', 'ありがとう、相棒'
   ]) assert.ok(dialogue.includes(phrase), `missing scripted phrase: ${phrase}`);

@@ -9,12 +9,13 @@ const unknownKeys = (value, allowed, name) => object(value) ? Object.keys(value)
 export function validateReleaseConfig(release, { production = false } = {}) {
   const errors = [];
   if (!object(release)) return ['release must be an object'];
-  const allowed = ['schemaVersion','releaseId','contentVersion','routeMode','initialStateProfile','contentPath','assetManifestPath','cacheName','compatibleReleaseIds','map'];
+  const allowed = ['schemaVersion','releaseId','contentVersion','routeMode','initialStateProfile','debugMode','contentPath','assetManifestPath','cacheName','compatibleReleaseIds','map'];
   errors.push(...unknownKeys(release, allowed, 'release'));
   if (!Number.isInteger(release.schemaVersion) || release.schemaVersion < 1) errors.push('release.schemaVersion must be a positive integer');
   for (const key of ['releaseId','contentVersion','contentPath','assetManifestPath','cacheName']) if (!present(release[key])) errors.push(`release.${key} is required`);
   if (!['primary','alternate'].includes(release.routeMode)) errors.push('release.routeMode must be primary or alternate');
   if (!['normal','test'].includes(release.initialStateProfile)) errors.push('release.initialStateProfile must be normal or test');
+  if (release.debugMode !== undefined && typeof release.debugMode !== 'boolean') errors.push('release.debugMode must be boolean');
   if (production && release.initialStateProfile !== 'normal') errors.push('production initialStateProfile must be normal');
   if (release.compatibleReleaseIds !== undefined && (!unique(release.compatibleReleaseIds) || !release.compatibleReleaseIds.every(present))) errors.push('release.compatibleReleaseIds must contain unique IDs');
   if (!object(release.map) || !Array.isArray(release.map.center) || release.map.center.length !== 2 || !Number.isInteger(release.map.zoom) || !present(release.map.attribution) || typeof release.map.tileUrl !== 'string') errors.push('release.map is invalid');

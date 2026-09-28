@@ -16,6 +16,8 @@ test('subtitle and manual-arrival path completes the entire game without privile
   state=reducePlayerState(state,{type:'q4-swap',from:0,to:2});
   state=reducePlayerState(state,{type:'q4-swap',from:1,to:3});
   state=transition(state,{type:'authenticate-final'});
+  assert.equal(state.currentSceneId,'s09');
+  state=transition(state,{type:'complete-repair'});
   state=transition(state,{type:'complete-ending'});
   assert.equal(state.endingSeen,true);
   assert.equal(state.currentSceneId,'completed');

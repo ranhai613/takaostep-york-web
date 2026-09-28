@@ -47,9 +47,12 @@ export function transition(state, event, now) {
       requireCondition(['part-r','part-a','part-m','part-i'].every(id => state.collectedPartIds.includes(id)), 'all parts are required');
       requireCondition(state.q4Order.join('') === 'MIRA', 'MIRA order is required');
       next = reducePlayerState(next, { type:'solve', puzzleId:'q4', eventId:'q4-solved' }, now);
-      return reducePlayerState(next, { type:'navigate', sceneId:'s10', chapterId:'chapter-ketsu' }, now);
+      return reducePlayerState(next, { type:'navigate', sceneId:'s09', chapterId:'chapter-ketsu' }, now);
+    case 'complete-repair':
+      requireCondition(state.currentSceneId === 's09' && state.completedEventIds.includes('q4-solved'), 'final repair sequence is required');
+      return reducePlayerState(next, { type:'navigate', sceneId:'s10' }, now);
     case 'complete-ending':
-      requireCondition(state.completedEventIds.includes('q4-solved'), 'final authentication is required');
+      requireCondition(state.currentSceneId === 's10' && state.completedEventIds.includes('q4-solved'), 'return communication is required');
       next = reducePlayerState(next, { type:'ending-seen' }, now);
       return reducePlayerState(next, { type:'navigate', sceneId:'completed' }, now);
     case 'replay-ending':

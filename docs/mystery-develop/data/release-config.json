@@ -4,6 +4,7 @@
   "contentVersion": "1.0.0-draft",
   "routeMode": "primary",
   "initialStateProfile": "normal",
+  "debugMode": true,
   "contentPath": "./data/content.json",
   "assetManifestPath": "./data/asset-manifest.json",
   "cacheName": "mira-signal-mira-poc-2026-09-r2",
