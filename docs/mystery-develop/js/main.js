@@ -23,6 +23,7 @@ let release,assets,content,state,savedResult;
 let locationWatcher;
 let selectedLetter=null;
 let incomingRingAudio=null;
+let incomingRingFailed=false;
 let callStartedAt=0;
 const callIsland=createCallIsland(document.querySelector('#call-island'),{
   onToggle:()=>{const clip=audioQueue.activeClip;if(clip?.src)handleAudio(audioQueue.audio?.paused?'play':'pause',[clip]);else{const clips=availableCallClips();if(clips.length)handleAudio('play',clips)}},
@@ -64,10 +65,10 @@ const clipById=id=>content.audioClips.find(clip=>clip.id===id);
 function startIncomingRing(){
   const source=clipById('audio-incoming-ring')?.src;
   if(!source)return;
-  if(!incomingRingAudio||incomingRingAudio.src!==new URL(source,document.baseURI).href){incomingRingAudio?.pause();incomingRingAudio=new Audio(source);incomingRingAudio.loop=true;incomingRingAudio.volume=.35}
-  if(incomingRingAudio.paused)incomingRingAudio.play().catch(()=>renderer.announce('着信音を再生できません。通話開始はそのまま押せます。'));
+  if(!incomingRingAudio||incomingRingAudio.src!==new URL(source,document.baseURI).href){incomingRingAudio?.pause();incomingRingAudio=new Audio(source);incomingRingAudio.loop=true;incomingRingAudio.volume=.35;incomingRingFailed=false}
+  if(incomingRingAudio.paused)incomingRingAudio.play().then(()=>{incomingRingFailed=false;document.querySelector('#ring-replay')?.setAttribute('hidden','')}).catch(()=>{incomingRingFailed=true;document.querySelector('#ring-replay')?.removeAttribute('hidden');if(document.querySelector('#answer-call'))renderer.announce('着信音を再生できません。着信音を再生ボタンで再試行できます。通話開始はそのまま押せます。')});
 }
-function stopIncomingRing(){if(incomingRingAudio){incomingRingAudio.pause();incomingRingAudio.currentTime=0}}
+function stopIncomingRing(){if(incomingRingAudio){incomingRingAudio.pause();incomingRingAudio.currentTime=0}incomingRingFailed=false}
 const playbackPriority=clip=>clip.kind==='main'?20000+(clip.priority??0):clip.kind==='bridge'?10000+(clip.priority??0):(clip.priority??0);
 const travelDelayClip=clip=>({id:`system-travel-delay-${clip.id}`,kind:'system',src:'./assets/audio/silence-10s.mp3',subtitle:'',priority:0,transient:true});
 const audioQueue=new AudioQueue({
@@ -95,7 +96,7 @@ function renderState(){
   if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){showDevicePickup(renderer,{onTap:startIncomingRing,onPickup:()=>commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))});return}
   if(['s01','s02'].includes(state.currentSceneId)){
     const intro=clipById('audio-intro');
-    showIncomingCall(renderer,{ringAvailable:Boolean(clipById('audio-incoming-ring')?.src),onRingReplay:startIncomingRing,onAnswer:()=>{stopIncomingRing();audioQueue.clear();if(commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'})))handleAudio('play',[intro])}});
+    showIncomingCall(renderer,{ringAvailable:Boolean(clipById('audio-incoming-ring')?.src),ringFailed:incomingRingFailed,onRingReplay:startIncomingRing,onAnswer:()=>{stopIncomingRing();audioQueue.clear();if(commit(reducePlayerState(state,{type:'navigate',sceneId:'s03'})))handleAudio('play',[intro])}});
     startIncomingRing();
     return;
   }
