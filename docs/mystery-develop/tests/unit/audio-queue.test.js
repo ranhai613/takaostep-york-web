@@ -20,6 +20,18 @@ test('ducks and restores background music around foreground clips', async () => 
 test('reuses one media element when advancing to the next queued clip', async () => {
   let factoryCalls=0;const queue=new AudioQueue({audioFactory:()=>{factoryCalls+=1;return new FakeAudio()}});queue.enqueue(clips[0]);queue.enqueue(clips[1]);await queue.playNext();const audio=queue.audio;assert.equal(queue.activeClip.id,'main');audio.listeners.ended();assert.equal(queue.activeClip.id,'bridge');assert.equal(queue.audio,audio);assert.equal(factoryCalls,1);
 });
+test('clearing a scene stops its audio and discards its pending clips before the next scene plays', async () => {
+  const queue=new AudioQueue({audioFactory:()=>new FakeAudio()});queue.enqueue(clips[0]);queue.enqueue(clips[1]);await queue.playNext();const audio=queue.audio;audio.currentTime=12;
+  queue.clear();assert.equal(audio.paused,true);assert.equal(audio.currentTime,0);assert.equal(queue.activeClip,null);assert.deepEqual(queue.pending,[]);
+  queue.enqueue(clips[1]);await queue.playNext();assert.equal(queue.activeClip.id,'bridge');assert.equal(audio.src,'bridge.mp3');assert.equal(audio.paused,false);
+});
+test('a stopped clip cannot report playback after the next scene starts', async () => {
+  const audio=new FakeAudio();const play=audio.play.bind(audio);let finishFirstPlay;let first=true;
+  audio.play=()=>{play();if(first){first=false;return new Promise(resolve=>{finishFirstPlay=resolve})}return Promise.resolve()};
+  const statuses=[];const queue=new AudioQueue({audioFactory:()=>audio,onStatus:event=>statuses.push([event.status,event.clip.id])});
+  queue.enqueue(clips[0]);const firstPlay=queue.playNext();queue.clear();queue.enqueue(clips[1]);await queue.playNext();finishFirstPlay();await firstPlay;
+  assert.deepEqual(statuses,[['playing','bridge']]);
+});
 test('preserves an explicit sequence of silence and bridge clips', async () => {
   const queue=new AudioQueue({audioFactory:()=>new FakeAudio()});const sequence=[{id:'delay-1',kind:'system',src:'silence.mp3'},{id:'bridge-1',kind:'bridge',src:'one.mp3'},{id:'delay-2',kind:'system',src:'silence.mp3'},{id:'bridge-2',kind:'bridge',src:'two.mp3'}];queue.enqueueSequence(sequence);await queue.playNext();assert.equal(queue.activeClip.id,'delay-1');for(const expected of ['bridge-1','delay-2','bridge-2']){queue.audio.listeners.ended();assert.equal(queue.activeClip.id,expected)}
 });

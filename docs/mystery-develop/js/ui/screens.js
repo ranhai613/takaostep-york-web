@@ -3,6 +3,25 @@ import { escapeHtml, subtitlePanel } from './renderer.js';
 const button = (id,label,kind='primary') => `<button id="${id}" class="${kind}">${escapeHtml(label)}</button>`;
 const progress = (index,total=4) => `<div class="progress-dots" aria-label="${index} / ${total} 地点完了">${Array.from({length:total},(_,i)=>`<span class="${i<index?'done':''}"></span>`).join('')}</div>`;
 const formatPuzzleText = value => escapeHtml(value).replace(/\*\*(.+?)\*\*/gu,'<strong>$1</strong>').replace(/\n/gu,'<br>');
+const formatHint = (puzzle,index) => {const image=puzzle.hintImages?.[index];return image?`<img class="puzzle-image hint-image" src="${escapeHtml(image)}" alt="${escapeHtml(puzzle.hints[index])}">`:escapeHtml(puzzle.hints[index])};
+function bindHintButton(puzzle,onHint){
+  const hintButton=document.querySelector('#show-hint');
+  hintButton?.addEventListener('click',()=>{
+    const index=onHint();
+    if(!Number.isInteger(index)||index<0||index>=puzzle.hints.length)return;
+    const scrollX=window.scrollX,scrollY=window.scrollY;
+    const hint=document.createElement('div');hint.className='hint';
+    const heading=document.createElement('strong');heading.textContent=`ヒント${index+1}`;
+    hint.append(heading,document.createElement('br'));
+    const image=puzzle.hintImages?.[index];
+    if(image){const img=document.createElement('img');img.className='puzzle-image hint-image';img.src=image;img.alt=puzzle.hints[index];hint.append(img)}
+    else hint.append(document.createTextNode(puzzle.hints[index]));
+    document.querySelector('.hints')?.append(hint);
+    if(index+1>=puzzle.hints.length){hintButton.remove();hint.tabIndex=-1;hint.focus({preventScroll:true})}
+    else hintButton.textContent=`ヒント${index+2}を見る`;
+    window.scrollTo(scrollX,scrollY);
+  });
+}
 
 export function showDevicePickup(renderer,{onPickup,onTap}){
   renderer.render(`<section id="device-pickup" class="device-pickup" aria-labelledby="pickup-title"><p class="eyebrow">SIGNAL DETECTED</p><h1 id="pickup-title" class="sr-only">地面に落ちているスマートフォンを拾う</h1><button id="pickup-device" class="pickup-target" type="button" aria-label="スマートフォンを拾う"><span class="pickup-phone" aria-hidden="true"><span class="pickup-speaker"></span><span class="pickup-camera"></span><span class="pickup-screen"><span class="pickup-signal">✦</span><span class="pickup-line"></span><span class="pickup-line short"></span></span></span><span class="pickup-tap" aria-hidden="true">TAP!</span></button><p class="pickup-caption">微かな光を放つ端末が落ちている</p></section>`);
@@ -40,18 +59,18 @@ export function showPuzzleBriefing(renderer,{puzzle,clip,onContinue}){
   document.querySelector('#open-puzzle').addEventListener('click',onContinue);
 }
 
-export function showPuzzle(renderer,{puzzle,hintCount=0,inventory,onSubmit,onHint,onZoom}){
+export function showPuzzle(renderer,{puzzle,hintCount=0,inventory,onSubmit,onHint,onZoom,onPlaySignal}){
   const image=puzzle.image?`<button id="zoom-image" class="secondary" aria-label="問題画像を拡大"><img class="puzzle-image zoomable" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"></button>`:'';
-  renderer.render(`<section class="card"><p class="eyebrow">PUZZLE ${String(puzzle.order).padStart(2,'0')}</p><h1>${escapeHtml(puzzle.id.toUpperCase())}</h1><p><strong>安全な場所で立ち止まって操作してください。</strong></p><p class="lead puzzle-prompt">${formatPuzzleText(puzzle.prompt)}</p>${image}<form id="answer-form" class="answer-form"><label for="answer">回答</label><input id="answer" name="answer" autocomplete="off" autocapitalize="characters" required><button class="primary" type="submit">回答を送信</button></form><p id="answer-feedback" class="feedback" role="alert"></p><div class="hints">${puzzle.hints.slice(0,hintCount).map((hint,i)=>`<div class="hint"><strong>ヒント${i+1}</strong><br>${escapeHtml(hint)}</div>`).join('')}</div>${hintCount<3?button('show-hint',`ヒント${hintCount+1}を見る`,'secondary'):''}<h2>回収パーツ</h2>${inventory}</section>`);
-  document.querySelector('#answer-form').addEventListener('submit',event=>{event.preventDefault();onSubmit(new FormData(event.currentTarget).get('answer'),document.querySelector('#answer-feedback'))});document.querySelector('#show-hint')?.addEventListener('click',onHint);document.querySelector('#zoom-image')?.addEventListener('click',onZoom);
+  renderer.render(`<section class="card"><p class="eyebrow">PUZZLE ${String(puzzle.order).padStart(2,'0')}</p><h1>${escapeHtml(puzzle.id.toUpperCase())}</h1><p><strong>安全な場所で立ち止まって操作してください。</strong></p><p class="lead puzzle-prompt">${formatPuzzleText(puzzle.prompt)}</p>${puzzle.signalAudioSrc?`<div class="actions signal-audio-controls"><button id="play-signal" class="primary" type="button">信号を聞く</button><details><summary>音声が聞こえない場合</summary><p>${escapeHtml(puzzle.audioFallbackText)}</p></details></div>`:''}${image}<form id="answer-form" class="answer-form"><label for="answer">回答</label><input id="answer" name="answer" autocomplete="off" autocapitalize="characters" required><button class="primary" type="submit">回答を送信</button></form><p id="answer-feedback" class="feedback" role="alert"></p><div class="hints">${puzzle.hints.slice(0,hintCount).map((hint,i)=>`<div class="hint"><strong>ヒント${i+1}</strong><br>${formatHint(puzzle,i)}</div>`).join('')}</div>${hintCount<3?button('show-hint',`ヒント${hintCount+1}を見る`,'secondary'):''}<h2>回収パーツ</h2>${inventory}</section>`);
+  document.querySelector('#answer-form').addEventListener('submit',event=>{event.preventDefault();onSubmit(new FormData(event.currentTarget).get('answer'),document.querySelector('#answer-feedback'))});bindHintButton(puzzle,onHint);document.querySelector('#play-signal')?.addEventListener('click',onPlaySignal);document.querySelector('#zoom-image')?.addEventListener('click',onZoom);
 }
 
 export function showFinal(renderer,{puzzle,parts,subtitle='',order,selected,inventory,onSelect,onSubmit,onHint,hintCount=0}){
   const partFor=value=>parts.find(part=>part.displayText===value);
-  renderer.render(`<section class="card hero"><p class="eyebrow">FINAL AUTHENTICATION</p><h1>登録操縦士を認証</h1>${subtitlePanel(subtitle)}<p class="puzzle-prompt">${escapeHtml(puzzle.prompt).replace(/\n/gu,'<br>')}</p><p class="muted">パーツを1つ選び、次に入れ替えるパーツを選んでください。</p><div class="reorder" aria-label="船体パーツの接続順">${order.map((value,index)=>{const part=partFor(value);return `<button class="part-tile" data-index="${index}" aria-pressed="${selected===index}" aria-label="${index+1}番目のパーツ。${escapeHtml(part.altText)}"><img src="${escapeHtml(part.image)}" alt=""></button>`}).join('')}</div><p id="answer-feedback" class="feedback" role="alert"></p><div class="hints">${puzzle.hints.slice(0,hintCount).map((hint,i)=>`<div class="hint"><strong>ヒント${i+1}</strong><br>${escapeHtml(hint)}</div>`).join('')}</div><div class="actions">${button('final-submit','この接続順で認証')}${hintCount<3?button('show-hint',`ヒント${hintCount+1}を見る`,'secondary'):''}</div><h2>回収パーツ</h2>${inventory}</section>`);
+  renderer.render(`<section class="card hero"><p class="eyebrow">FINAL AUTHENTICATION</p><h1>登録操縦士を認証</h1>${subtitlePanel(subtitle)}<p class="puzzle-prompt">${escapeHtml(puzzle.prompt).replace(/\n/gu,'<br>')}</p><p class="muted">パーツを1つ選び、次に入れ替えるパーツを選んでください。</p><div class="reorder" aria-label="船体パーツの接続順">${order.map((value,index)=>{const part=partFor(value);return `<button class="part-tile" data-index="${index}" aria-pressed="${selected===index}" aria-label="${index+1}番目のパーツ。${escapeHtml(part.altText)}"><img src="${escapeHtml(part.image)}" alt=""></button>`}).join('')}</div><p id="answer-feedback" class="feedback" role="alert"></p><div class="hints">${puzzle.hints.slice(0,hintCount).map((hint,i)=>`<div class="hint"><strong>ヒント${i+1}</strong><br>${formatHint(puzzle,i)}</div>`).join('')}</div><div class="actions">${button('final-submit','この接続順で認証')}${hintCount<3?button('show-hint',`ヒント${hintCount+1}を見る`,'secondary'):''}</div><h2>回収パーツ</h2>${inventory}</section>`);
   const tiles=[...document.querySelectorAll('.part-tile')];
   const updateReorder=next=>{if(!next)return;tiles.forEach((tile,index)=>{const part=partFor(next.order[index]);tile.setAttribute('aria-pressed',String(next.selected===index));tile.setAttribute('aria-label',`${index+1}番目のパーツ。${part.altText}`);tile.querySelector('img').src=part.image})};
-  tiles.forEach(tile=>tile.addEventListener('click',()=>updateReorder(onSelect(Number(tile.dataset.index)))));document.querySelector('#final-submit').addEventListener('click',()=>onSubmit(document.querySelector('#answer-feedback')));document.querySelector('#show-hint')?.addEventListener('click',onHint);
+  tiles.forEach(tile=>tile.addEventListener('click',()=>updateReorder(onSelect(Number(tile.dataset.index)))));document.querySelector('#final-submit').addEventListener('click',()=>onSubmit(document.querySelector('#answer-feedback')));bindHintButton(puzzle,onHint);
 }
 
 export function showFatal(renderer,title,detail,onRetry){renderer.render(`<section class="card hero"><p class="eyebrow">CONNECTION ERROR</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(detail)}</p><div class="actions">${button('retry','再試行')}</div></section>`);document.querySelector('#retry').addEventListener('click',onRetry)}

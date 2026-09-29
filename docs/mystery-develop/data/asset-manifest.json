@@ -43,6 +43,7 @@
   ],
   "optional": [
     "./assets/audio/sfx/click_next.mp3",
+    "./assets/audio/sfx/morsecode_HOLES.mp3",
     "./assets/audio/sfx/電話の呼び出し音.mp3",
     "./assets/audio/silence-10s.mp3",
     "./assets/audio/……聞こえる！？ よかった、通信がつながった！ その端末を拾ってくれた地球人だよね。...地球人、改めてよろしくね。.mp3",

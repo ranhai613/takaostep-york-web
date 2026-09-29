@@ -92,7 +92,7 @@ const audioQueue=new AudioQueue({
 });
 
 function commit(next,{render=true}={}){
-  try{store.save(next);state=next;if(render)renderState();return true}catch(error){renderer.showDialog({title:'進行を保存できません',body:'<p>ブラウザの保存領域を確認してください。画面を閉じる前に再試行してください。</p>',confirmText:'確認',cancelText:''});console.error(error);return false}
+  try{store.save(next);if(state?.currentSceneId!==next.currentSceneId)audioQueue.clear();state=next;if(render)renderState();return true}catch(error){renderer.showDialog({title:'進行を保存できません',body:'<p>ブラウザの保存領域を確認してください。画面を閉じる前に再試行してください。</p>',confirmText:'確認',cancelText:''});console.error(error);return false}
 }
 
 function runTransition(event,{render=true}={}){try{return commit(transition(state,event),{render})}catch(error){console.warn(error);renderer.announce(error.message);return false}}
@@ -139,7 +139,7 @@ function renderState(){
     startIncomingRing();
     return;
   }
-  if(state.currentSceneId==='s03'){showIntro(renderer,{clip:clipById('audio-intro'),onNext:()=>{if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay()}});return}
+  if(state.currentSceneId==='s03'){showIntro(renderer,{clip:clipById('audio-intro'),onNext:()=>{const wasPlaying=Boolean(audioQueue.activeClip?.src&&!audioQueue.audio?.paused);if(runTransition({type:'complete-intro'}))startTravelAudioWithDelay({immediate:wasPlaying})}});return}
   if(state.currentSceneId==='s04'){renderTravel();return}
   if(['s05','s06'].includes(state.currentSceneId)){renderPuzzleScreen();return}
   if(state.currentSceneId==='s07'){const puzzle=content.puzzles.find(item=>state.solvedPuzzleIds.includes(item.id)&&!state.completedEventIds.includes(`${item.id}-continued`))??content.puzzles[Math.max(0,state.solvedPuzzleIds.length-1)];const part=content.parts.find(item=>item.id===puzzle.partId);renderer.showPartAcquired(part,puzzle,inventory(),()=>{let next=reducePlayerState(state,{type:'complete-event',id:`${puzzle.id}-continued`});next=transition(next,{type:'advance-after-part'});if(commit(next))startTravelAudioWithDelay()});return}
@@ -163,10 +163,10 @@ function renderTravel(){
   startLocation(spot);
 }
 
-function startTravelAudioWithDelay(){
+function startTravelAudioWithDelay({immediate=false}={}){
   const spot=currentSpot(),trigger=spot.order===1?'intro-completed':`q${spot.order-1}-solved`;
   const clips=getTravelClips(content.audioClips,trigger).filter(clip=>!state.listenedAudioIds.includes(clip.id));
-  if(clips.length)handleAudio('delayed-play',clips);
+  if(clips.length)handleAudio(immediate?'play':'delayed-play',clips);
 }
 
 function startLocation(spot){
@@ -205,7 +205,8 @@ function renderPuzzleScreen(){
     handleAudio('priority-play',[briefing]);
     return;
   }
-  showPuzzle(renderer,{puzzle,hintCount:hintCount(puzzle),inventory:inventory(),onSubmit:(answer,feedback)=>{if(!isAcceptedAnswer(answer,puzzle.acceptedAnswers,puzzle.normalizationRules)){feedback.className='feedback error';feedback.textContent='認証できませんでした。入力を見直すか、ヒントを確認してください。';return}runTransition({type:'solve',puzzleId:puzzle.id,correct:true,partId:puzzle.partId})},onHint:()=>runTransition({type:'view-hint',puzzleId:puzzle.id,hintIndex:hintCount(puzzle)}),onZoom:()=>renderer.showDialog({title:'問題画像',body:`<img class="puzzle-image" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"><p>${escapeHtml(puzzle.altText)}</p>`,confirmText:'閉じる',cancelText:''})});
+  const signalClip=puzzle.signalAudioSrc?{id:`audio-${puzzle.id}-signal`,kind:'system',src:puzzle.signalAudioSrc,subtitle:'',priority:0,transient:true}:null;
+  showPuzzle(renderer,{puzzle,hintCount:hintCount(puzzle),inventory:inventory(),onPlaySignal:()=>{if(signalClip)handleAudio('priority-play',[signalClip])},onSubmit:(answer,feedback)=>{if(!isAcceptedAnswer(answer,puzzle.acceptedAnswers,puzzle.normalizationRules)){feedback.className='feedback error';feedback.textContent='認証できませんでした。入力を見直すか、ヒントを確認してください。';return}runTransition({type:'solve',puzzleId:puzzle.id,correct:true,partId:puzzle.partId})},onHint:()=>{const index=hintCount(puzzle);return runTransition({type:'view-hint',puzzleId:puzzle.id,hintIndex:index},{render:false})?index:null},onZoom:()=>renderer.showDialog({title:'問題画像',body:`<img class="puzzle-image" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"><p>${escapeHtml(puzzle.altText)}</p>`,confirmText:'閉じる',cancelText:''})});
 }
 
 function renderFinal(){
@@ -222,7 +223,7 @@ function renderFinal(){
       if(state.q4Order.join('')!=='MIRA'){feedback.className='feedback error';feedback.textContent='登録情報と一致しません。並びを変えて再試行してください。';return}
       audioQueue.clear();if(runTransition({type:'authenticate-final'}))syncCallPlayback();
     },
-    onHint:()=>runTransition({type:'view-hint',puzzleId:'q4',hintIndex:hintCount(puzzle)})
+    onHint:()=>{const index=hintCount(puzzle);return runTransition({type:'view-hint',puzzleId:'q4',hintIndex:index},{render:false})?index:null}
   });
 }
 
