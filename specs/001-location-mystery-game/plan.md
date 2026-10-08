@@ -12,6 +12,15 @@
 
 開発時は実行環境を通常開発、オフライン試験、本番の3モードに分ける。`localhost`、`127.0.0.1`、`[::1]` の通常アクセスではService WorkerとCache Storageによる公開用制御を無効化し、現在のアプリスコープの登録と `mira-signal-` 接頭辞のキャッシュだけを自動整理する。ローカルで `?sw=1` を明示した場合のみ本番相当のオフライン制御を有効化し、非ローカル環境ではクエリ指定に関係なく常に本番モードとする。PlayerStateの `localStorage` はモード切替で変更しない。
 
+### 事前指定GeoJSONルート（2026-10-08）
+
+- 主ルートは `docs/mystery-develop/data/routes-primary.geojson` を配信する。4つのLineStringの数値ID 1〜4を目的地点のorderに対応させる。ゲームの4スポットとは別に扱い、ルート頂点で進行を解放しない。
+- `core/route-geometry.js` で形式、IDの重複・欠落、経度・緯度の範囲を検証する。目的地に近い端点を終点として向きを正規化し、入力ファイルは変更しない。第1区間は逆順で記録されているため、読み込み時に開始地点→第1地点の順にする。
+- `main.js` が素材準備後にルートを読み込み、目的地に対応するFeatureを `MapView.mount` に渡す。代替モードの最終区間にはnullを渡し、第1〜第3区間は主ルートを使う。代替用GeoJSONは作成しない。
+- `MapView` はLeaflet標準の折れ線を白い外縁と色付き内線の2層で描き、出発地点を表示する。初回のサイズ確定後にルートと到着範囲へfitBoundsし、GPS更新は現在地マーカーだけを更新する。表示破棄時は描画参照と初期表示タイマーを解除する。
+- 新規JSとGeoJSONをasset-manifestの必須素材へ登録する。既存Service Workerはdata配下をネットワーク優先・キャッシュ代替で扱うため、オフライン時にもルートを取得できる。背景地図タイルは別扱いとする。取得済みデータが不正な場合は線なしの地点案内へ切り替える。
+- 実データ4区間の対応と第1区間の反転、破損・重複ID・不正座標の拒否、代替最終区間の非表示、初回fitBounds・GPS更新時の表示範囲維持を検証する。
+
 ## Technical Context
 
 **Language/Version**: HTML5、CSS3、JavaScript ES2020 ES Modules。Node.js 22以上はテスト実行時のみ使用
@@ -90,10 +99,11 @@ docs/mystery-develop/
 ├── styles/app.css
 ├── js/
 │   ├── main.js
-│   ├── core/{answer-normalizer,content-validator,game-state,runtime-mode,state-machine}.js
+│   ├── core/{answer-normalizer,content-validator,game-state,runtime-mode,route-geometry,state-machine}.js
 │   ├── services/{asset-preloader,audio-queue,location,offline-control,storage}.js
 │   └── ui/{map-view,renderer,screens}.js
 ├── data/{asset-manifest,content,release-config}.json
+├── data/routes-primary.geojson        # 4区間の事前指定ルート、代替最終区間は未作成
 ├── assets/{audio,images,icons}/
 ├── vendor/leaflet/
 └── tests/{contract,integration,unit,fixtures}/

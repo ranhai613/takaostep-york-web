@@ -4,6 +4,7 @@ import { getConversationLog } from './core/conversation-log.js';
 import { DEBUG_STAGES, buildDebugState, debugStageForState, showDebugControls } from './core/debug-progress.js';
 import { createInitialState, reducePlayerState } from './core/game-state.js';
 import { resolveRuntimeMode } from './core/runtime-mode.js';
+import { validateRoutes, getRouteForSpot } from './core/route-geometry.js';
 import { transition } from './core/state-machine.js';
 import { isAcceptedAnswer } from './core/answer-normalizer.js';
 import { createStateStore, PLAYER_STATE_KEY } from './services/storage.js';
@@ -19,7 +20,7 @@ import { showDevicePickup, showIncomingCall, showPreparation, showIntro, showTra
 const renderer=new Renderer();
 const mapView=new MapView({onTileError:message=>renderer.announce(message)});
 const runtimeMode=resolveRuntimeMode({hostname:location.hostname,search:location.search});
-let release,assets,content,state,savedResult,store;
+let release,assets,content,state,savedResult,store,routes=null;
 let developerMode=false;
 let debugJumpRevision=0;
 let locationWatcher;
@@ -159,7 +160,10 @@ function renderTravel(){
   const trigger=index===1?'intro-completed':`q${index-1}-solved`;
   const routeClips=getTravelClips(content.audioClips,trigger);
   showTravel(renderer,{spot,index,inventory:inventory(),subtitle:routeClips[0]?.subtitle??'',onArrive:()=>arriveAt(spot),onLocation:()=>startLocation(spot)});
-  mapView.mount(document.querySelector('#map'),spot,release.map);
+  const route=getRouteForSpot(routes,spot,release.routeMode);
+  const mapElement=document.querySelector('#map');
+  mapView.mount(mapElement,spot,release.map,route);
+  if(route){const legend=document.createElement('p');legend.className='muted map-legend';legend.textContent='緑の線：通るルート ／ 黄色の点：現在地';mapElement.after(legend)}
   startLocation(spot);
 }
 
@@ -258,6 +262,11 @@ async function bootstrap(){
     const prepared=await prepareAssets({required:assets.required,optional:assets.optional,cacheName:release.cacheName,persist,onProgress:item=>{progress.value=item.percent;detail.textContent=`${persist?'必須素材を準備中':'最新素材を確認中'}… ${item.completed}/${item.total}`}});
     if(persist)await cleanupStaleCaches(caches,release.cacheName);
     if(!prepared.ready){showAssetFailure(renderer,prepared,bootstrap);return}
+    routes=null;
+    try{
+      const loadedRoutes=await fetchJson('./data/routes-primary.geojson');
+      assertValid(validateRoutes(loadedRoutes),'route data');routes=loadedRoutes;
+    }catch(error){console.warn('Route display unavailable',error);renderer.announce('ルートの線を表示できません。目的地点と文字案内を確認してください。')}
     const profile=await loadTestProfile();savedResult=profile?{status:'test',state:profile}:store.load(release);
     if(['corrupt','incompatible'].includes(savedResult.status)){offerFreshStart(savedResult.status==='corrupt'?'保存データが破損しています。削除せず保持しています。':'公開版との互換性を確認できません。旧状態は削除せず保持しています。');return}
     if(savedResult.state){state=savedResult.state;updateStatusButton();showPreparation(renderer,{hasSaved:true,onContinue:renderState,onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,transitionSound:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})});return}

@@ -6,11 +6,13 @@ import { performance } from 'node:perf_hooks';
 import { validateAll, assertValid } from '../js/core/content-validator.js';
 import { createInitialState, reducePlayerState } from '../js/core/game-state.js';
 import { distanceMeters } from '../js/services/location.js';
+import { validateRoutes } from '../js/core/route-geometry.js';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const json=async path=>JSON.parse(await readFile(resolve(root,path),'utf8'));
 const [release,assets,content]=await Promise.all(['data/release-config.json','data/asset-manifest.json','data/content.json'].map(json));
 assertValid(validateAll({release,assets,content},{production:true}));
+assertValid(validateRoutes(await json('data/routes-primary.geojson')),'route data');
 assert.equal(release.initialStateProfile,'normal');
 assert.ok(assets.required.every(path=>!/^https?:/i.test(path)),'required assets must not use a CDN');
 for(const path of assets.required)await access(resolve(root,path.replace(/^\.\//,'')));
