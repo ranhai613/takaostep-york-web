@@ -22,6 +22,8 @@
 #ring-replay{min-height:40px;padding:.35rem .8rem;font-size:.82rem}
 @keyframes incoming-pulse{50%{box-shadow:0 0 0 17px rgb(84 230 216/.03),0 0 55px rgb(84 230 216/.3)}}
 @media(prefers-reduced-motion:reduce){.incoming-avatar{animation:none}}
+/* Leafletの高いz-indexを地図内に閉じ込め、通話アイランドやヘッダーより手前に出さない。 */
+#map{position:relative;z-index:0;isolation:isolate}
 .call-island-wrap{position:sticky;z-index:19;top:66px;display:flex;justify-content:center;padding:.4rem .6rem 0;pointer-events:none}
 .call-island-wrap[hidden]{display:none}
 .call-island{display:flex;align-items:center;gap:.55rem;width:min(100%,420px);min-height:62px;padding:.55rem .7rem;border:1px solid rgb(84 230 216/.38);border-radius:999px;color:var(--ink);background:linear-gradient(135deg,#0b1826,#102d3b);box-shadow:0 10px 32px rgb(0 0 0/.42),inset 0 0 20px rgb(84 230 216/.05);pointer-events:auto}

@@ -29,20 +29,17 @@ export class Renderer {
     const positions=[[-135,-135,-58,-58],[135,-135,58,-58],[-135,135,-58,58],[135,135,58,58]];
     const dockStart=600,dockInterval=1800,dockDuration=1250;
     const pieces=parts.map((part,index)=>{const [sx,sy,dx,dy]=positions[index];return `<img class="repair-piece" src="${escapeHtml(part.image)}" alt="" draggable="false" style="--start-x:${sx}px;--start-y:${sy}px;--dock-x:${dx}px;--dock-y:${dy}px;--dock-delay:${dockStart+index*dockInterval}ms;--dock-duration:${dockDuration}ms">`}).join('');
-    this.render(`<section id="repair-scene" class="repair-scene is-running" aria-labelledby="repair-title"><p class="eyebrow">FINAL CONNECTION</p><h1 id="repair-title">船体、再起動。</h1><div class="repair-frame" aria-hidden="true"><div class="repair-ring"></div><div class="repair-core">✦</div>${pieces}<div class="repair-wave"></div></div><p class="repair-progress"><strong id="repair-count">0 / 4</strong><span>船体パーツ接続</span></p><p id="repair-status" class="repair-status" role="status">認証成功。パーツを接続しています…</p><div class="repair-signal" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p id="repair-signal-label" class="repair-signal-label">MIRA SIGNAL / WEAK</p><div class="repair-actions"><button id="repair-skip" class="secondary" type="button">演出をスキップ</button><button id="repair-continue" class="primary" type="button" hidden>ミラの通信を開く</button></div></section>`);
-    const scene=document.querySelector('#repair-scene'),count=document.querySelector('#repair-count'),status=document.querySelector('#repair-status'),signal=document.querySelector('#repair-signal-label'),skip=document.querySelector('#repair-skip'),next=document.querySelector('#repair-continue');
+    this.render(`<section id="repair-scene" class="repair-scene is-running" aria-labelledby="repair-title"><p class="eyebrow">FINAL CONNECTION</p><h1 id="repair-title">船体、再起動。</h1><div class="repair-frame" aria-hidden="true"><div class="repair-ring"></div><div class="repair-core">✦</div>${pieces}<div class="repair-wave"></div></div><p class="repair-progress"><strong id="repair-count">0 / 4</strong><span>船体パーツ接続</span></p><p id="repair-status" class="repair-status" role="status">認証成功。パーツを接続しています…</p><div class="repair-signal" aria-hidden="true"><span></span><span></span><span></span><span></span></div><p id="repair-signal-label" class="repair-signal-label">MIRA SIGNAL / WEAK</p><div class="repair-actions"><button id="repair-continue" class="primary" type="button" hidden>ミラの通信を開く</button></div></section>`);
+    const scene=document.querySelector('#repair-scene'),count=document.querySelector('#repair-count'),status=document.querySelector('#repair-status'),signal=document.querySelector('#repair-signal-label'),next=document.querySelector('#repair-continue');
     const timers=[];
     const clearTimers=()=>timers.splice(0).forEach(clearTimeout);
-    const finish=(focus=false)=>{
+    const finish=()=>{
       if(scene.classList.contains('is-complete'))return;
       clearTimers();
-      const moveFocus=focus||document.activeElement===skip;
       scene.classList.remove('is-running');scene.classList.add('is-signal','is-complete');
       count.textContent='4 / 4';status.textContent='船体機能復旧。ミラとの通信が回復しました。';signal.textContent='MIRA SIGNAL / RESTORED';
-      skip.hidden=true;next.hidden=false;
-      if(moveFocus)next.focus({preventScroll:true});
+      next.hidden=false;
     };
-    skip.addEventListener('click',()=>finish(true));
     next.addEventListener('click',()=>{
       if(next.disabled)return;
       clearTimers();next.disabled=true;

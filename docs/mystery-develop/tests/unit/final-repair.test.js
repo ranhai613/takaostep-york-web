@@ -14,7 +14,6 @@ function showRepair(reducedMotion){
     '#repair-count':{textContent:'0 / 4'},
     '#repair-status':{textContent:'認証成功。パーツを接続しています…'},
     '#repair-signal-label':{textContent:'MIRA SIGNAL / WEAK'},
-    '#repair-skip':{hidden:false,addEventListener:(type,handler)=>listeners.set(`skip:${type}`,handler)},
     '#repair-continue':{hidden:true,focused:false,focus(){this.focused=true},addEventListener:(type,handler)=>listeners.set(`continue:${type}`,handler)}
   };
   globalThis.document={
@@ -30,17 +29,16 @@ function showRepair(reducedMotion){
   return {elements,listeners,classes,markup,overlays,get continued(){return continued}};
 }
 
-test('the final repair can be skipped, then fades to the return communication for five seconds', t => {
+test('the final repair finishes before fading to the return communication for five seconds', t => {
   t.mock.timers.enable({apis:['setTimeout']});
   try{
     const view=showRepair(false);
     assert.equal((view.markup.match(/class="repair-piece"/gu)??[]).length,4);
-    view.listeners.get('skip:click')();
+    assert.doesNotMatch(view.markup,/repair-skip|演出をスキップ/u);
+    t.mock.timers.tick(10000);
     assert.equal(view.classes.has('is-complete'),true);
     assert.equal(view.elements['#repair-count'].textContent,'4 / 4');
-    assert.equal(view.elements['#repair-skip'].hidden,true);
     assert.equal(view.elements['#repair-continue'].hidden,false);
-    assert.equal(view.elements['#repair-continue'].focused,true);
     view.listeners.get('continue:click')();
     assert.equal(view.continued,0);
     assert.equal(view.overlays.length,1);

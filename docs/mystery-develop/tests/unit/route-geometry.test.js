@@ -11,11 +11,15 @@ test('published route IDs select all four legs and end at the matching target',(
   for(const spot of spots){
     const route=getRouteForSpot(routes,spot);
     assert.equal(route.id,spot.order);
+    assert.deepEqual(routes.features.find(feature=>feature.id===spot.order).geometry.coordinates.at(-1),[spot.lng,spot.lat]);
     assert.deepEqual(route.geometry.coordinates.at(-1),[spot.lng,spot.lat]);
   }
   const original=structuredClone(routes);
   const first=getRouteForSpot(routes,spots[0]);
-  assert.deepEqual(first.geometry.coordinates[0],routes.features[0].geometry.coordinates.at(-1));
+  assert.deepEqual(first.geometry.coordinates[0],routes.features[0].geometry.coordinates[0]);
+  const reversed=structuredClone(routes);
+  reversed.features[0].geometry.coordinates.reverse();
+  assert.deepEqual(getRouteForSpot(reversed,spots[0]).geometry.coordinates,first.geometry.coordinates);
   assert.deepEqual(routes,original);
   first.geometry.coordinates[0][0]=0;
   assert.deepEqual(routes,original);
