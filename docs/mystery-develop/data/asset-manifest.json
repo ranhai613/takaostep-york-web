@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseId": "mira-poc-2026-10-r1",
+  "releaseId": "mira-poc-2026-10-r2",
   "required": [
     "./index.html",
     "./manifest.webmanifest",
