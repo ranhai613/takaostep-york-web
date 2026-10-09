@@ -12,8 +12,8 @@ export function getBgmTrack(state){
   if(!state)return null;
   const solved=(state.solvedPuzzleIds??[]).filter(id=>['q1','q2','q3'].includes(id)).length;
   switch(state.currentSceneId){
-    case 's01':return state.completedEventIds?.includes('terminal-picked-up')?'ki':null;
-    case 's02':case 's03':return 'ki';
+    case 's01':case 's02':return null;
+    case 's03':return 'ki';
     case 's04':return fieldTracks[Math.min(solved,3)];
     case 's05':case 's06':{
       const order=Number(state.reachedSpotIds?.at(-1)?.match(/\d+/)?.[0])||solved+1;

@@ -23,7 +23,7 @@ export class AudioQueue {
   restart(){if(this.audio)this.audio.currentTime=0}
   restore(seconds){if(this.audio&&Number.isFinite(seconds))this.audio.currentTime=Math.max(0,seconds)}
   setBgm(audio,volume=.35){this.bgmAudio=audio;this.bgmBaseVolume=Math.max(0,Math.min(1,volume));if(audio){audio.loop=true;audio.volume=this.bgmBaseVolume}}
-  duckBgm(active=true){if(this.bgmAudio)this.bgmAudio.volume=active?Math.min(.12,this.bgmBaseVolume):this.bgmBaseVolume}
+  duckBgm(active=true){if(this.bgmAudio)this.bgmAudio.volume=active?Math.min(.08,this.bgmBaseVolume):this.bgmBaseVolume}
   setBgmVolume(volume){this.bgmBaseVolume=Math.max(0,Math.min(1,volume));this.duckBgm(shouldDuck(this.activeClip)&&Boolean(this.audio&&!this.audio.paused))}
   clear(){this.audio?.pause();if(this.audio)this.audio.currentTime=0;this.pending=[];this.finishActive()}
 }

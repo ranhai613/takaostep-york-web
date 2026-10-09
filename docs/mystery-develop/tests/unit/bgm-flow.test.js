@@ -5,7 +5,7 @@ import { DEBUG_STAGES, buildDebugState } from '../../js/core/debug-progress.js';
 
 test('BGM covers every screen and keeps the current part through its reward',()=>{
   const expected={
-    preparation:null,device:null,incoming:'ki',intro:'ki',
+    preparation:null,device:null,incoming:null,intro:'ki',
     'travel-1':'ki','briefing-1':'ki','puzzle-1':'ki','part-1':'ki',
     'travel-2':'shou','briefing-2':'shou','puzzle-2':'shou','part-2':'shou',
     'travel-3':'ten','briefing-3':'ten','puzzle-3':'ten','part-3':'ten',
@@ -15,6 +15,12 @@ test('BGM covers every screen and keeps the current part through its reward',()=
     assert.equal(getBgmTrack(buildDebugState('bgm-test',stage.id)),expected[stage.id],stage.id);
   }
   assert.equal(getBgmTrack(null),null);
+});
+
+test('opening music starts with Miras request, not device pickup or the incoming call',()=>{
+  assert.equal(getBgmTrack({currentSceneId:'s01',completedEventIds:['terminal-picked-up']}),null);
+  assert.equal(getBgmTrack({currentSceneId:'s02'}),null);
+  assert.equal(getBgmTrack({currentSceneId:'s03'}),'ki');
 });
 
 test('ending music starts at the return call, not the repair animation',()=>{
