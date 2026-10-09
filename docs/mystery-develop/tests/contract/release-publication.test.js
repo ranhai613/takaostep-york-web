@@ -6,6 +6,7 @@ import { validateReleaseConfig } from '../../js/core/content-validator.js';
 test('production release is normal and supports declared route modes', async () => {
   const release = JSON.parse(await readFile(new URL('../../data/release-config.json', import.meta.url), 'utf8'));
   assert.deepEqual(validateReleaseConfig(release, { production: true }), []);
+  assert.equal(Object.hasOwn(release, 'debugMode'), false);
   assert.ok(['primary', 'alternate'].includes(release.routeMode));
   assert.ok(Array.isArray(release.compatibleReleaseIds));
 });

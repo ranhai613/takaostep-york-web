@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "releaseId": "mira-poc-2026-09",
+  "releaseId": "mira-poc-2026-10-r1",
   "chapters": [
     { "id": "chapter-ki", "order": 1, "title": "起｜発見", "startEventId": "game-started", "completionEventId": "intro-completed", "sceneIds": ["s00", "s01", "s02", "s03"] },
     { "id": "chapter-sho", "order": 2, "title": "承｜回収", "startEventId": "intro-completed", "completionEventId": "q2-solved", "sceneIds": ["s04", "s05", "s06", "s07"] },
