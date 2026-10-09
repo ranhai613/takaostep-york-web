@@ -57,7 +57,7 @@ export class Renderer {
     timers.push(setTimeout(()=>finish(),10000));
   }
   showEnding(text,onComplete){this.render(`<section class="card hero"><div class="ending-star" aria-hidden="true">✦</div><p class="eyebrow">RETURN SEQUENCE</p><h1>帰還通信</h1>${subtitlePanel(text)}<div class="actions"><button id="ending-complete" class="primary">通信を最後まで確認した</button></div></section>`);document.querySelector('#ending-complete').addEventListener('click',onComplete)}
-  showMemorial(parts,onReplay){this.render(`<section class="card hero"><p class="eyebrow">MISSION COMPLETE</p><h1>相棒、任務完了。</h1><p class="lead">MIRAの帰還認証に成功しました。</p>${this.inventory(parts,parts.map(p=>p.id))}<p class="objective"><strong>報酬：</strong>1オークエン<br><span class="muted">※物語上の報酬です。実際の金銭ではありません。</span></p><div class="actions"><button id="replay-ending" class="secondary">エンディングを再視聴</button></div></section>`);document.querySelector('#replay-ending').addEventListener('click',onReplay)}
+  showMemorial(parts,onReplay){this.render(`<section class="card hero"><p class="eyebrow">MISSION COMPLETE</p><h1>相棒、任務完了。</h1><p class="lead">最後までプレイしていただきありがとうございました！</p>${this.inventory(parts,parts.map(p=>p.id))}<p class="objective"><strong>報酬：</strong>1オークエン<br><span class="muted">※物語上の報酬です。実際の金銭ではありません。</span></p><div class="actions"><button id="replay-ending" class="secondary">エンディングを再視聴</button></div></section>`);document.querySelector('#replay-ending').addEventListener('click',onReplay)}
 }
 
 export function formatPartProgress(parts,collectedPartIds){return `${parts.filter(part=>collectedPartIds.includes(part.id)).length}/${parts.length}`}

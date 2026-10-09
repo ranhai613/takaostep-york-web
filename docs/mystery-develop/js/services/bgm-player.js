@@ -4,7 +4,7 @@ const clamp=value=>Math.max(0,Math.min(1,Number(value)||0));
 const createContext=()=>{const Context=globalThis.AudioContext||globalThis.webkitAudioContext;return Context?new Context():null};
 
 export class BgmPlayer {
-  constructor({audioFactory=()=>new Audio(),contextFactory=createContext,fadeMs=300,now=()=>performance.now(),setTimer=setTimeout,clearTimer=clearTimeout,onError=()=>{}}={}){
+  constructor({audioFactory=()=>new Audio(),contextFactory=createContext,fadeMs=300,now=()=>performance.now(),setTimer=(callback,delay)=>globalThis.setTimeout(callback,delay),clearTimer=id=>globalThis.clearTimeout(id),onError=()=>{}}={}){
     this.audio=audioFactory();this.audio.preload='auto';this.audio.loop=true;this.audio.volume=0;
     this.contextFactory=contextFactory;this.fadeMs=Math.max(0,fadeMs);this.now=now;this.setTimer=setTimer;this.clearTimer=clearTimer;this.onError=onError;
     this.context=null;this.fadeGain=null;this.volumeGain=null;this.graphCreated=false;

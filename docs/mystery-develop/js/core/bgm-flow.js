@@ -20,8 +20,8 @@ export function getBgmTrack(state){
       return fieldTracks[Math.max(0,Math.min(order-1,3))];
     }
     case 's07':return fieldTracks[Math.max(0,Math.min(solved-1,2))];
-    case 's08':return 'ketsu';
-    case 's09':case 's10':case 'completed':return 'ed';
+    case 's08':case 's09':return 'ketsu';
+    case 's10':case 'completed':return 'ed';
     default:return null;
   }
 }

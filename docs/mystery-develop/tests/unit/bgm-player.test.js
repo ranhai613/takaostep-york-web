@@ -33,6 +33,28 @@ function setup(options={}){
   return {player,audio,clock};
 }
 
+test('default browser timers are called on the global object, not the player',async()=>{
+  const originalSet=globalThis.setTimeout,originalClear=globalThis.clearTimeout;
+  const timers=new Map(),errors=[];
+  let serial=0;
+  try{
+    globalThis.setTimeout=function(callback){assert.equal(this,globalThis);const id=++serial;timers.set(id,callback);return id};
+    globalThis.clearTimeout=function(id){assert.equal(this,globalThis);timers.delete(id)};
+    const audio=new FakeAudio();
+    const param={value:1,cancelScheduledValues(){},setValueAtTime(){},linearRampToValueAtTime(){}};
+    const node=()=>({gain:{...param},connect(next){return next}});
+    const context={currentTime:0,destination:{},createMediaElementSource:node,createGain:node,resume:()=>Promise.resolve()};
+    const player=new BgmPlayer({audioFactory:()=>audio,contextFactory:()=>context,onError:error=>errors.push(error)});
+    await player.unlock();
+    const first=player.switchTo('ki');await flush();
+    assert.equal(timers.size,1);
+    const stop=player.switchTo(null);await flush();
+    for(const [id,callback] of [...timers]){timers.delete(id);callback()}
+    await Promise.all([first,stop]);
+    assert.deepEqual(errors,[]);assert.equal(audio.paused,true);
+  }finally{globalThis.setTimeout=originalSet;globalThis.clearTimeout=originalClear}
+});
+
 test('loops BGM and preserves playback across screens assigned to the same track',async()=>{
   const {player,audio,clock}=setup();
   const first=player.switchTo('ki');await clock.advance(320);await first;
