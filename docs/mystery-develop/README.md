@@ -20,6 +20,12 @@ python -m http.server 4173
 
 HTTPSまたはlocalhost以外では位置情報とService Workerが利用できない場合があります。
 
+## BGM
+
+`assets/audio/bgm/` のMP3をループ再生します。着信〜Q1クリアは `ki`、Q2への移動〜Q2クリアは `shou`、Q3への移動〜Q3クリアは `ten`、Q4への移動〜認証は `ketsu`、認証成功後のクリア画面とエンディングは `ed` です。同じパート内では再生位置を保ち、次のパートへ進むと約0.3秒のフェードアウトと約0.3秒のフェードインで切り替えます。
+
+通常音量は35%、会話やモールス信号の再生中は12%です。曲と画面の対応は `js/core/bgm-flow.js`、フェード時間は `js/services/bgm-player.js`、通常音量は `js/main.js` の `setBgm` で変更できます。オフライン用の素材準備にも5曲を登録しています。
+
 ## 開催前の公開設定
 
 1. `data/release-config.json` の `releaseId` と `cacheName` を新しい公開版へ更新します。

@@ -13,6 +13,7 @@
     "./vendor/leaflet/images/marker-shadow.png",
     "./js/main.js",
     "./js/core/answer-normalizer.js",
+    "./js/core/bgm-flow.js",
     "./js/core/content-validator.js",
     "./js/core/conversation-log.js",
     "./js/core/debug-progress.js",
@@ -23,6 +24,7 @@
     "./js/core/state-machine.js",
     "./js/services/asset-preloader.js",
     "./js/services/audio-queue.js",
+    "./js/services/bgm-player.js",
     "./js/services/location.js",
     "./js/services/offline-control.js",
     "./js/services/storage.js",
@@ -44,6 +46,11 @@
     "./assets/images/parts/scrap_I.png"
   ],
   "optional": [
+    "./assets/audio/bgm/ki.mp3",
+    "./assets/audio/bgm/shou.mp3",
+    "./assets/audio/bgm/ten.mp3",
+    "./assets/audio/bgm/ketsu.mp3",
+    "./assets/audio/bgm/ed.mp3",
     "./assets/audio/sfx/click_next.mp3",
     "./assets/audio/sfx/morsecode_HOLES.mp3",
     "./assets/audio/sfx/電話の呼び出し音.mp3",

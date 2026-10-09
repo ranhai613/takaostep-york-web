@@ -17,6 +17,19 @@ test('rewind falls back to the last reported progress when live time is temporar
 test('ducks and restores background music around foreground clips', async () => {
   const queue=new AudioQueue({audioFactory:()=>new FakeAudio()});const bgm=new FakeAudio();queue.setBgm(bgm,.4);queue.enqueue(clips[0]);await queue.playNext();assert.equal(bgm.volume,.12);queue.finishActive();assert.equal(bgm.volume,.4);
 });
+test('paused or failed foreground audio restores BGM and resume ducks it again', async () => {
+  const queue=new AudioQueue({audioFactory:()=>new FakeAudio()}),bgm=new FakeAudio();queue.setBgm(bgm,.4);
+  queue.enqueue(clips[0]);await queue.playNext();queue.pause();assert.equal(bgm.volume,.4);
+  await queue.resume();assert.equal(bgm.volume,.12);
+  queue.audio.listeners.error();assert.equal(bgm.volume,.4);
+  queue.audio.play=()=>Promise.reject(new Error('unavailable'));
+  await queue.resume();assert.equal(bgm.volume,.4);
+});
+test('subtitles and the travel silence delay keep BGM at its normal volume', async () => {
+  const queue=new AudioQueue({audioFactory:()=>new FakeAudio()}),bgm=new FakeAudio();queue.setBgm(bgm,.4);
+  queue.enqueue({id:'subtitle',kind:'main',src:''});await queue.playNext();assert.equal(bgm.volume,.4);
+  queue.finishActive();queue.enqueue({id:'delay',kind:'system',src:'silence.mp3',duckBgm:false});await queue.playNext();assert.equal(bgm.volume,.4);
+});
 test('reuses one media element when advancing to the next queued clip', async () => {
   let factoryCalls=0;const queue=new AudioQueue({audioFactory:()=>{factoryCalls+=1;return new FakeAudio()}});queue.enqueue(clips[0]);queue.enqueue(clips[1]);await queue.playNext();const audio=queue.audio;assert.equal(queue.activeClip.id,'main');audio.listeners.ended();assert.equal(queue.activeClip.id,'bridge');assert.equal(queue.audio,audio);assert.equal(factoryCalls,1);
 });

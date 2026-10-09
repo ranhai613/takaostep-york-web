@@ -1,6 +1,7 @@
 import { validateAll, assertValid } from './core/content-validator.js';
 import { getPuzzleBriefingClip, getPuzzleBriefingEventId, getTravelClips } from './core/dialogue-flow.js';
 import { getConversationLog } from './core/conversation-log.js';
+import { getBgmTrack } from './core/bgm-flow.js';
 import { DEBUG_STAGES, buildDebugState, debugStageForState, showDebugControls } from './core/debug-progress.js';
 import { createInitialState, reducePlayerState } from './core/game-state.js';
 import { resolveRuntimeMode } from './core/runtime-mode.js';
@@ -11,6 +12,7 @@ import { createStateStore, PLAYER_STATE_KEY } from './services/storage.js';
 import { prepareAssets, cleanupStaleCaches } from './services/asset-preloader.js';
 import { cleanupDevelopmentOfflineState, clearDevelopmentReloadGuard } from './services/offline-control.js';
 import { AudioQueue } from './services/audio-queue.js';
+import { BgmPlayer } from './services/bgm-player.js';
 import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
@@ -85,15 +87,21 @@ function startIncomingRing(){
 }
 function stopIncomingRing(){if(incomingRingAudio){incomingRingAudio.pause();incomingRingAudio.currentTime=0}incomingRingFailed=false}
 const playbackPriority=clip=>clip.kind==='main'?20000+(clip.priority??0):clip.kind==='bridge'?10000+(clip.priority??0):(clip.priority??0);
-const travelDelayClip=clip=>({id:`system-travel-delay-${clip.id}`,kind:'system',src:'./assets/audio/silence-10s.mp3',subtitle:'',priority:0,transient:true});
+const travelDelayClip=clip=>({id:`system-travel-delay-${clip.id}`,kind:'system',src:'./assets/audio/silence-10s.mp3',subtitle:'',priority:0,transient:true,duckBgm:false});
+const bgmPlayer=new BgmPlayer({onError:error=>console.warn('BGM playback failed',error)});
 const audioQueue=new AudioQueue({
   onSubtitle:(subtitle)=>{const box=document.querySelector('.subtitle-panel .subtitle');if(box&&subtitle)box.textContent=subtitle},
   onProgress:(clip,seconds)=>{if(!clip||clip.transient||!state)return;commit(reducePlayerState(state,{type:'audio-progress',audioId:clip.id,seconds}),{render:false})},
   onStatus:({status,clip})=>{syncCallPlayback();if(status==='failed')renderer.announce('音声を再生できませんでした。字幕を開くか、会話ログで内容を確認できます。');if(status==='ended'&&clip&&!clip.transient&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 });
+audioQueue.setBgm(bgmPlayer,.35);
+const unlockBgm=()=>bgmPlayer.unlock().catch(error=>console.warn('BGM playback failed',error));
+document.addEventListener('click',unlockBgm,{capture:true,passive:true});
+document.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key))unlockBgm()},{capture:true});
+function syncBgm(){bgmPlayer.switchTo(getBgmTrack(state)).catch(error=>console.warn('BGM playback failed',error))}
 
 function commit(next,{render=true}={}){
-  try{store.save(next);if(state?.currentSceneId!==next.currentSceneId)audioQueue.clear();state=next;if(render)renderState();return true}catch(error){renderer.showDialog({title:'進行を保存できません',body:'<p>ブラウザの保存領域を確認してください。画面を閉じる前に再試行してください。</p>',confirmText:'確認',cancelText:''});console.error(error);return false}
+  try{store.save(next);if(state?.currentSceneId!==next.currentSceneId)audioQueue.clear();state=next;syncBgm();if(render)renderState();return true}catch(error){renderer.showDialog({title:'進行を保存できません',body:'<p>ブラウザの保存領域を確認してください。画面を閉じる前に再試行してください。</p>',confirmText:'確認',cancelText:''});console.error(error);return false}
 }
 
 function runTransition(event,{render=true}={}){try{return commit(transition(state,event),{render})}catch(error){console.warn(error);renderer.announce(error.message);return false}}
@@ -128,6 +136,7 @@ function currentSpot(){return [...content.spots].sort((a,b)=>a.order-b.order)[Ma
 function hintCount(puzzle){return state.viewedHintIds.filter(id=>id.startsWith(`${puzzle.id}-hint-`)).length}
 
 function renderState(){
+  syncBgm();
   updateStatusButton();
   syncCallVisibility();
   mapView.destroy();locationWatcher?.stop();

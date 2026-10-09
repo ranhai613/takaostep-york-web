@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { validateAll, validateContent } from '../../js/core/content-validator.js';
+import { BGM_SOURCES } from '../../js/core/bgm-flow.js';
 
 const load = async path => JSON.parse(await readFile(new URL(path, import.meta.url), 'utf8'));
 
@@ -14,6 +15,7 @@ test('published data has matching releases and valid references', async () => {
   assert.ok(content.spots.every(spot => spot.fallbackMode === 'player-confirmation'));
   const registeredAssets=new Set([...assets.required,...assets.optional]);
   assert.ok(content.audioClips.filter(clip=>clip.src).every(clip=>registeredAssets.has(clip.src)),'every assigned audio source must be registered in the asset manifest');
+  assert.ok(Object.values(BGM_SOURCES).every(src=>registeredAssets.has(src)),'every BGM source must be registered for offline preparation');
   assert.ok(content.parts.every(part=>/\/scrap_[RAMI]\.png$/u.test(part.image)),'parts must use the scrap artwork');
   assert.ok(content.parts.every(part=>registeredAssets.has(part.image)),'every part image must be registered in the asset manifest');
 });
@@ -34,11 +36,16 @@ test('Q1 uses the final orbital image and diary extraction sequence', async () =
   assert.ok(q1.prompt.includes('**木**の下'));
   assert.match(q1.prompt,/\*\*木\*\*[\s\S]*\*\*海\*\*[\s\S]*\*\*水\*\*[\s\S]*\*\*火\*\*[\s\S]*\*\*天\*\*[\s\S]*\*\*金\*\*[\s\S]*\*\*地\*\*[\s\S]*\*\*土\*\*/u);
 
-  const q3=content.puzzles.find(puzzle=>puzzle.id==='q3');
-  assert.equal(q3.image,'./assets/images/puzzles/q3-morse-code.jpg');
-  assert.equal(q3.briefingImage,'./assets/images/puzzles/q3-morse-code.jpg');
   assert.ok(q1.explanation.includes('U・N・I・V・E・R・S・E'));
   assert.ok(q1.altText.includes('水星はI'));
   assert.ok(assets.required.includes(q1.image));
   assert.equal(assets.required.includes('./assets/images/puzzles/q1-placeholder.svg'),false);
+});
+
+test('Q3 keeps the Morse chart in hint 1 instead of the question and briefing', async () => {
+  const content=await load('../../data/content.json');
+  const q3=content.puzzles.find(puzzle=>puzzle.id==='q3');
+  assert.equal(q3.image,null);
+  assert.equal(q3.briefingImage,undefined);
+  assert.equal(q3.hintImages['0'],'./assets/images/puzzles/q3-morse-code.jpg');
 });
