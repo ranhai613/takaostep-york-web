@@ -46,6 +46,7 @@
     "./assets/images/parts/scrap_I.png"
   ],
   "optional": [
+    "./assets/audio/sfx/arrive.mp3",
     "./assets/audio/bgm/ki.mp3",
     "./assets/audio/bgm/shou.mp3",
     "./assets/audio/bgm/ten.mp3",
