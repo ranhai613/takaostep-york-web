@@ -2,10 +2,10 @@
 
 <!--
 Sync Impact Report
-- Version change: 1.0.0 -> 1.0.0 (未コミットの仕様整合更新のため版番号は維持)
-- Modified principles: III（位置情報の救済経路）、V（開催前設定と再デプロイによる運営）
-- Added constraints: 歩行20分・全体30〜40分、画面表示推奨、振動の音声・視覚フォールバック、分析データ非収集
-- Removed sections: なし
+- Version change: 1.0.0 -> 1.0.1 (公開URLに合わせた実装ルートの更新)
+- Modified principles: Additional Constraintsの実装ルートを `docs/mystery/` に変更
+- Updated artifacts: plan.md、tasks.md、research.md、quickstart.md、アプリREADME
+- Removed artifacts: `docs/mystery/` にあった旧プロトタイプを現行アプリで置換
 - Deferred items: ルートの現地測量、Q1最終図版・解法はfeature specのTODOに記載
 -->
 
@@ -59,9 +59,9 @@ Workerによる主要音声・画像のキャッシュ、コンテンツのバ�
 
 - 配信はHTTPSを前提とし、位置情報、音声、振動、キャッシュの利用可否を対象端末で
   確認する。
-- 本ゲームの実装はリポジトリ内の `docs/mystery-develop/` をルートとして行い、アプリ
+- 本ゲームの実装はリポジトリ内の `docs/mystery/` をルートとして行い、アプリ
   ケーションコード、静的アセット、設定、テスト、ビルド・補助ファイルを同ディレクトリ
-  内に置かなければならない。公開エントリーポイントは `docs/mystery-develop/index.html`
+  内に置かなければならない。公開エントリーポイントは `docs/mystery/index.html`
   とし、`index.html` は同ディレクトリ直下に置かなければならない。
 - 屋外の日中でも読める高コントラスト、拡大可能な問題画像、代替テキスト、字幕、
   文字サイズへの配慮を実装しなければならない。
@@ -122,4 +122,4 @@ Semantic Versioningに従って版番号を更新する。ラベルのない要�
 
 TODO(RATIFICATION_DATE): 当初採択日をプロジェクト責任者が確認し、実日付へ置換する。
 
-**Version**: 1.0.0 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-09-11
+**Version**: 1.0.1 | **Ratified**: TODO(RATIFICATION_DATE) | **Last Amended**: 2026-10-11

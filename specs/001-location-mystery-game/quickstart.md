@@ -7,12 +7,12 @@
 - iOS Safari実機、Android Chrome実機
 - 位置情報を利用できるHTTPSのプレビュー環境（現地試験用）
 
-実装は `docs/mystery-develop/` 内に置き、`file://` ではなくlocalhostまたはHTTPSで開く。
+実装は `docs/mystery/` 内に置き、`file://` ではなくlocalhostまたはHTTPSで開く。
 
 ## Local Run
 
 ```powershell
-python -m http.server 8000 --directory docs/mystery-develop
+python -m http.server 8000 --directory docs/mystery
 ```
 
 `http://localhost:8000/` を開く。このURLは通常開発モードで、公開用のService WorkerとMIRA専用キャッシュを使用しない。以前のオフライン試験が残っている場合は、このアプリの登録とキャッシュだけを自動整理し、必要なら1回だけ自動再読込する。PlayerStateは保持する。
@@ -24,7 +24,7 @@ python -m http.server 8000 --directory docs/mystery-develop
 ## Automated Checks
 
 ```powershell
-node --test docs/mystery-develop/tests
+node --test docs/mystery/tests
 ```
 
 以下を自動検証対象とする。

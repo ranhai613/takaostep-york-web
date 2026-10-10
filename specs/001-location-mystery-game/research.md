@@ -4,7 +4,7 @@
 
 ### 静的モジュール構成
 
-**Decision**: 本番は `docs/mystery-develop/` に新設し、Vanilla JavaScriptのES Modulesで画面、状態機械、サービス、データを分離する。
+**Decision**: 本番は `docs/mystery/` に新設し、Vanilla JavaScriptのES Modulesで画面、状態機械、サービス、データを分離する。
 
 **Rationale**: 固定規模ではフレームワークより明示的な状態遷移を純粋関数化する方が小さく検証しやすい。PoCは地点編集・デバッグ・音声試聴が中心で、章、謎、復帰、字幕、オフライン完走の状態モデルを持たない。
 

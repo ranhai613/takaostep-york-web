@@ -1,46 +1,55 @@
-# Takaostep Locatone Prototype
+# MIRA SIGNAL 開発・開催前運用
 
-位置情報に応じて音声スポットの MP3 を再生する、GitHub Pages 向けの静的 Web アプリ試作品です。
+この静的Webアプリの実装、設定、素材、テストはすべて `docs/mystery/` 内にあります。旧プロトタイプは現行アプリで置き換え済みです。公開入口は `index.html`、公開URLは `https://takaostep.com/mystery/` です。追加ランタイムライブラリはローカル同梱したLeaflet 1.9.4だけです。
 
-## 使い方
+## ローカル確認
 
-1. `index.html` を HTTPS または localhost で開きます。
-2. `開始` を押して、位置情報を許可します。
-3. 地図をクリックするか `現在地を使う` でスポット座標を入れます。
-4. MP3 の URL / パス、または手元の MP3 ファイルを指定して `スポット追加` を押します。
-5. 登録した半径内に入ると音声が再生されます。
+Node.js 22以上とPython 3を使います。
 
-## GitHub Pages に置く場合
-
-このリポジトリのルートを GitHub Pages の公開対象にすれば、そのまま動作します。
-
-MP3 をリポジトリ内で管理する場合は、`audio/guide-01.mp3` のように `audio` フォルダへ置き、`spots.json` または画面フォームの `MP3 URL / パス` にそのパスを指定してください。
-
-## ファイル構成
-
-```text
-index.html
-style.css
-app.js
-config.json
-spots.json
+```powershell
+cd docs/mystery
+npm run check
+python -m http.server 4173
 ```
 
-## BGM設定
+ブラウザで `http://localhost:4173/` を開きます。この通常開発URLではService Workerを登録せず、Cache Storageにも素材を保存しません。以前のオフライン試験が残っている場合は、現在のアプリスコープの登録と `mira-signal-` で始まるキャッシュだけを自動整理します。PlayerStateを保存する `localStorage` と、このゲーム以外のキャッシュは変更しません。
 
-`config.json` の `bgm.src` に BGM としてループ再生したい MP3 のパスを指定します。
+コンテンツ、JavaScript、CSS、画像を変更した後は、`releaseId` や `cacheName` を変更せず通常の再読込を1回行います。旧Service Workerのcontrollerが残っている場合だけ、自動再読込がセッション内で最大1回行われます。整理に失敗した場合や再読込がさらに必要になった場合は、古い表示で本編を開始せず、開発者向けの再試行画面で停止します。
 
-```json
-{
-  "bgm": {
-    "src": "audio/bgm.mp3"
-  }
-}
-```
+オフライン動作を確認するときだけ `http://localhost:4173/?sw=1` を開きます。`?sw=1` は公開環境と同じService Worker登録、版付き必須素材キャッシュ、更新・通信切断・復帰の検証経路です。`?sw`、`?sw=true`、`?sw=0`、重複した `sw` パラメーターは通常開発として扱います。公開された非ローカルURLではクエリに関係なく常に本番用オフライン動作が有効で、参加者向けの切替UIはありません。
 
-## 制約
+HTTPSまたはlocalhost以外では位置情報とService Workerが利用できない場合があります。
 
-- 位置情報は HTTPS または localhost でのみ安定して使えます。
-- スマホブラウザでは、画面を閉じた状態のバックグラウンド監視は期待できません。
-- ブラウザの自動再生制限を避けるため、最初に `開始` ボタンを押す必要があります。
-- 画面から選んだローカル MP3 ファイルは、そのブラウザセッション中だけ再生できます。
+## BGM
+
+`assets/audio/bgm/` のMP3をループ再生します。着信〜Q1クリアは `ki`、Q2への移動〜Q2クリアは `shou`、Q3への移動〜Q3クリアは `ten`、Q4への移動〜認証は `ketsu`、認証成功後のクリア画面とエンディングは `ed` です。同じパート内では再生位置を保ち、次のパートへ進むと約0.3秒のフェードアウトと約0.3秒のフェードインで切り替えます。
+
+通常音量は35%、会話やモールス信号の再生中は8%です。曲と画面の対応は `js/core/bgm-flow.js`、フェード時間は `js/services/bgm-player.js`、通常音量は `js/main.js` の `setBgm` で変更できます。オフライン用の素材準備にも5曲を登録しています。
+
+## 開催前の公開設定
+
+1. `data/release-config.json` の `releaseId` と `cacheName` を新しい公開版へ更新します。
+2. 通常ルートは `routeMode: "primary"`、庭園閉園時の代替ルートは `routeMode: "alternate"` にします。代替最終地点は `data/route-alternate.json` で開催前に確定します。
+3. `data/content.json` の4地点の座標、半径、順序、安全停止文言を現地測量済みの値へ更新します。
+4. 保存状態を継続できる旧版だけを `compatibleReleaseIds` に列挙します。判断できない版は列挙しません。
+5. 開発用の章・地点開始はlocalhostでのみ `initialStateProfile: "test"` とURLの `?profile=q2-arrived` を使えます。公開前に必ず `"normal"` に戻します。
+6. `data/asset-manifest.json` の `releaseId` と必須素材一覧を合わせ、`npm run check` を通します。
+7. 静的サイトを再デプロイし、新規アクセス、既存状態、オフライン再読込を確認します。開催中は設定を変更しません。
+
+想定作業時間は15分以内です。参加者画面には章解放、地点スキップ、遠隔リセット、デバッグ位置変更、状態出力、分析機能を設けていません。
+
+## 更新・ロールバック
+
+- 新版では `releaseId` と `cacheName` を必ず更新します。Service Workerは同一オリジンの旧MIRAキャッシュだけを削除します。
+- 互換版は進行状態を新版へ移行します。非互換版は旧状態を削除せず、新規開始の確認を表示します。
+- 問題がある場合は以前の静的成果物を再デプロイします。以前の `releaseId` を復元し、開催中にルートだけを差し替えないでください。
+
+## 公開前に残る必須作業
+
+- Q1の第三者試解による解法の一意性テスト
+- 4地点と代替地点の現地測量、安全確認、歩行時間確認
+- ミラ音声、システム音、効果音、BGMの最終版追加と字幕照合
+- 1817年の八王子隕石、高尾山、北斗七星、ケーブルカー、天文学表現の事実確認
+- iOS Safari／Android Chromeの実機試験と、通常・早解き・全ヒントの実歩行試験
+
+上記が未完了のため、現在の `contentVersion` は `1.0.0-draft` です。アプリ機能は全文字幕と常時表示の到着ボタンだけでも最後まで進行できます。

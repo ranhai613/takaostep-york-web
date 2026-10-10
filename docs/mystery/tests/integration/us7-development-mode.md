@@ -2,7 +2,7 @@
 
 ## 前提
 
-- `python -m http.server 4173` を `docs/mystery-develop/` で起動する。
+- `python -m http.server 4173` を `docs/mystery/` で起動する。
 - ブラウザの強制再読込と「サイトデータを削除」は使用しない。
 - テスト開始前のPlayerStateを記録する。
 
