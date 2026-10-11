@@ -73,6 +73,7 @@ dialog.conversation-dialog[open]{display:flex;flex-direction:column;max-height:8
 .location-fallback summary{padding:.8rem 1rem;color:var(--muted);font-weight:700;cursor:pointer}
 .location-fallback summary:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
 .location-fallback[open] summary{border-bottom:1px solid var(--line)}
+.location-fallback h3{margin:.85rem 1rem;padding-left:.75rem}
 .location-fallback p{margin:.85rem 1rem;color:var(--muted);font-size:.9rem}
 .fallback-actions{display:grid;gap:.6rem;padding:0 1rem 1rem}
 .fallback-actions button{width:100%;font-weight:700}
