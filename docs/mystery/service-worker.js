@@ -20,7 +20,8 @@ async function loadRelease(){
   return configPromise;
 }
 
-self.addEventListener('install',event=>{event.waitUntil((async()=>{try{const release=await loadRelease();const manifest=await fetch(release.assetManifestPath,{cache:'no-store'}).then(r=>r.json());const cache=await caches.open(CACHE_NAME);await Promise.all(manifest.required.map(async path=>{const response=await fetch(path,{cache:'reload'});if(!response.ok)throw new Error(`precache failed: ${path} (${response.status})`);await cache.put(path,response)}))}catch(error){console.warn('Precache deferred to app',error)}await self.skipWaiting()})())});
+// Bulk downloads start in the app only after the preparation button is pressed.
+self.addEventListener('install',event=>{event.waitUntil(self.skipWaiting())});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{try{await loadRelease()}catch{}const keys=await caches.keys();await Promise.all(keys.filter(key=>key.startsWith(CACHE_PREFIX)&&key!==CACHE_NAME).map(key=>caches.delete(key)));await self.clients.claim()})())});
 
 async function cacheResponse(request,response){if(response?.ok){const cache=await caches.open(CACHE_NAME);await cache.put(request,response.clone())}return response}

@@ -28,6 +28,8 @@ HTTPSまたはlocalhost以外では位置情報とService Workerが利用でき�
 
 ## 開催前の公開設定
 
+準備画面で容量を案内し、「準備して通信を開く」（再開時は「続きから」）を押した後に音声・画像などをまとめてダウンロードします。初期表示に必要なHTML、JavaScript、CSS、公開設定は先に読み込みます。容量は `data/asset-manifest.json` の `downloadBytes` に、必須・任意素材の合計バイト数を1MB単位で切り上げて設定します。素材を追加・差し替えたときは容量も更新してください。公開前の検証で実ファイルの合計と照合します。
+
 1. `data/release-config.json` の `releaseId` と `cacheName` を新しい公開版へ更新します。
 2. 通常ルートは `routeMode: "primary"`、庭園閉園時の代替ルートは `routeMode: "alternate"` にします。代替最終地点は `data/route-alternate.json` で開催前に確定します。
 3. `data/content.json` の4地点の座標、半径、順序、安全停止文言を現地測量済みの値へ更新します。

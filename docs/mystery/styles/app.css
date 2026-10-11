@@ -110,3 +110,5 @@ dialog.conversation-dialog[open]{display:flex;flex-direction:column;max-height:8
 .repair-whiteout{position:fixed;z-index:120;inset:0;pointer-events:auto;background:#fff;opacity:0;animation:repair-whiteout 5s ease-in-out both}
 @keyframes repair-whiteout{0%{opacity:0}50%{opacity:1}100%{opacity:0}}
 @media(prefers-reduced-motion:reduce){.repair-whiteout{display:none}}
+
+.preparation-key-visual{display:block;width:100%;height:auto;margin:1rem 0;border-radius:12px}

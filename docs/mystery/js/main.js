@@ -17,7 +17,7 @@ import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
 import { createCallIsland } from './ui/call-island.js';
-import { showDevicePickup, showIncomingCall, showPreparation, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
+import { showDevicePickup, showIncomingCall, showPreparation, showAssetDownload, showIntro, showTravel, showPuzzleBriefing, showPuzzle, showFinal, showFatal, showAssetFailure, showDevelopmentCleanupFailure } from './ui/screens.js';
 
 const renderer=new Renderer();
 const mapView=new MapView({onTileError:message=>renderer.announce(message)});
@@ -31,6 +31,9 @@ let selectedLetter=null;
 let incomingRingAudio=null;
 let incomingRingFailed=false;
 let callStartedAt=0;
+let assetsReady=false;
+let preparingAssets=false;
+let downloadStarted=false;
 renderer.screen.addEventListener('submit',event=>{
   if(event.target.id!=='answer-form'||!state||!content)return;
   const index=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);
@@ -57,6 +60,7 @@ function availableCallClips(){
     const order=Number(state.reachedSpotIds.at(-1)?.match(/\d+/)?.[0]);
     return [getPuzzleBriefingClip(content.audioClips,order)].filter(clip=>clip?.src);
   }
+  if(state.currentSceneId==='s08')return [clipById('audio-final-connection')].filter(clip=>clip?.src);
   if(state.currentSceneId==='s10')return [clipById('audio-ending')].filter(clip=>clip?.src);
   return [];
 }
@@ -95,7 +99,7 @@ const audioQueue=new AudioQueue({
   onStatus:({status,clip})=>{syncCallPlayback();if(status==='failed')renderer.announce('音声を再生できませんでした。字幕を開くか、会話ログで内容を確認できます。');if(status==='ended'&&clip&&!clip.transient&&state)commit(reducePlayerState(state,{type:'audio-listened',audioId:clip.id}),{render:false})}
 });
 audioQueue.setBgm(bgmPlayer,.35);
-const unlockBgm=()=>bgmPlayer.unlock().catch(error=>console.warn('BGM playback failed',error));
+const unlockBgm=()=>{if(downloadStarted)return bgmPlayer.unlock().catch(error=>console.warn('BGM playback failed',error))};
 document.addEventListener('click',unlockBgm,{capture:true,passive:true});
 document.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key))unlockBgm()},{capture:true});
 function syncBgm(){bgmPlayer.switchTo(getBgmTrack(state)).catch(error=>console.warn('BGM playback failed',error))}
@@ -131,7 +135,7 @@ function openDebugMenu(){
   dialog.querySelector('#debug-stage').focus();
 }
 function inventory(){return renderer.inventory(content.parts,state.collectedPartIds)}
-function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'0/4';button.textContent=`PARTS ${progress}`;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`);document.querySelector('#conversation-button').disabled=!(content&&state);const debugButton=document.querySelector('#debug-button');debugButton.hidden=!(developerMode&&state);document.body.classList.toggle('debug-mode',!debugButton.hidden)}
+function updateStatusButton(){const button=document.querySelector('#status-button');const progress=content&&state?formatPartProgress(content.parts,state.collectedPartIds):'0/4';button.disabled=!assetsReady;button.textContent=`PARTS ${progress}`;button.setAttribute('aria-label',`進行状況を表示。回収パーツ ${progress}`);document.querySelector('#conversation-button').disabled=!(content&&state&&assetsReady);const debugButton=document.querySelector('#debug-button');debugButton.hidden=!(developerMode&&state);debugButton.disabled=!assetsReady;document.body.classList.toggle('debug-mode',!debugButton.hidden)}
 function currentSpot(){return [...content.spots].sort((a,b)=>a.order-b.order)[Math.min(state.solvedPuzzleIds.filter(id=>id!=='q4').length,3)]}
 function hintCount(puzzle){return state.viewedHintIds.filter(id=>id.startsWith(`${puzzle.id}-hint-`)).length}
 
@@ -141,7 +145,7 @@ function renderState(){
   syncCallVisibility();
   mapView.destroy();locationWatcher?.stop();
   if(state.endingSeen&&state.currentSceneId==='completed'){renderer.showMemorial(content.parts,()=>renderer.showEnding(clipById('audio-ending').subtitle,()=>renderState()));return}
-  if(state.currentSceneId==='s00'){showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});return}
+  if(state.currentSceneId==='s00'){renderPreparation();return}
   if(state.currentSceneId==='s01'&&!state.completedEventIds.includes('terminal-picked-up')){const revision=debugJumpRevision;showDevicePickup(renderer,{onTap:startIncomingRing,onPickup:()=>{if(debugJumpRevision===revision)commit(reducePlayerState(state,{type:'complete-event',id:'terminal-picked-up'}))}});return}
   if(['s01','s02'].includes(state.currentSceneId)){
     const intro=clipById('audio-intro');
@@ -238,13 +242,49 @@ function renderFinal(){
     },
     onHint:()=>{const index=hintCount(puzzle);return runTransition({type:'view-hint',puzzleId:'q4',hintIndex:index},{render:false})?index:null}
   });
+  if(finalConnection?.src&&!state.listenedAudioIds.includes(finalConnection.id)&&audioQueue.activeClip?.id!==finalConnection.id){
+    handleAudio('priority-play',[finalConnection]);
+  }
 }
 
-function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,transitionSound:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}
+function offerFreshStart(message){showFatal(renderer,'保存状態をそのまま再開できません',message,()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末のゲーム進行だけを削除します。準備済み素材は保持されます。</p>',confirmText:'進行を初期化',cancelText:'戻る',danger:true,transitionSound:assetsReady,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}}))}
 
-async function registerServiceWorker(){if(!('serviceWorker'in navigator))return null;navigator.serviceWorker.addEventListener('controllerchange',()=>location.reload());try{const registration=await navigator.serviceWorker.register('./service-worker.js');registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)renderer.announce('新しい公開版があります。安全な場所で再読込してください。')})});return registration}catch(error){console.warn('Service Worker registration failed',error);return null}}
+async function registerServiceWorker(){if(!('serviceWorker'in navigator))return null;try{const registration=await navigator.serviceWorker.register('./service-worker.js');registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)renderer.announce('新しい公開版があります。安全な場所で再読込してください。')})});return registration}catch(error){console.warn('Service Worker registration failed',error);return null}}
 
 async function loadTestProfile(){if(release.initialStateProfile!=='test')return null;if(!runtimeMode.isLocal)throw new Error('test initialStateProfile is blocked outside localhost');const name=new URLSearchParams(location.search).get('profile')??'q2-arrived';const profile=await fetchJson(`./tests/fixtures/release-profiles/${name}.json`);return profile.state?{...createInitialState(release.releaseId),...profile.state,releaseId:release.releaseId,updatedAt:new Date().toISOString()}:null}
+
+function renderPreparation({hasSaved=false}={}){
+  showPreparation(renderer,{
+    hasSaved,downloadBytes:assets.downloadBytes,
+    onReady:()=>prepareForPlay(()=>runTransition({type:'acknowledge-safety'})),
+    onContinue:()=>prepareForPlay(renderState),
+    onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,transitionSound:assetsReady,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})
+  });
+}
+
+async function prepareForPlay(onReady){
+  if(assetsReady){onReady();return}
+  if(preparingAssets)return;
+  preparingAssets=true;downloadStarted=true;
+  unlockBgm();
+  showAssetDownload(renderer);
+  try{
+    if(runtimeMode.offlineEnabled)await registerServiceWorker();
+    const progress=document.querySelector('#loading-progress'),detail=document.querySelector('#loading-detail');
+    const persist=runtimeMode.offlineEnabled&&'caches'in globalThis;
+    const prepared=await prepareAssets({required:assets.required,optional:assets.optional,cacheName:release.cacheName,persist,onProgress:item=>{progress.value=item.percent;progress.textContent=`${item.percent}%`;detail.textContent=`音声・画像を準備中… ${item.completed}/${item.total}`}});
+    if(!prepared.ready){showAssetFailure(renderer,prepared,()=>prepareForPlay(onReady));return}
+    if(persist)await cleanupStaleCaches(caches,release.cacheName);
+    routes=null;
+    try{
+      const loadedRoutes=await fetchJson('./data/routes-primary.geojson');
+      assertValid(validateRoutes(loadedRoutes),'route data');routes=loadedRoutes;
+    }catch(error){console.warn('Route display unavailable',error);renderer.announce('ルートの線を表示できません。目的地点と文字案内を確認してください。')}
+    assetsReady=true;
+    onReady();
+  }catch(error){console.error(error);showFatal(renderer,'素材をダウンロードできません',error.message,()=>prepareForPlay(onReady))}
+  finally{preparingAssets=false}
+}
 
 async function bootstrap(){
   try{
@@ -265,21 +305,10 @@ async function bootstrap(){
     assertValid(validateAll({release,assets,content},{production:runtimeMode.kind==='production'}));
     developerMode=showDebugControls(runtimeMode,release);
     store=createStateStore(globalThis.localStorage,developerMode?`${PLAYER_STATE_KEY}:debug`:PLAYER_STATE_KEY);
-    if(runtimeMode.offlineEnabled)await registerServiceWorker();
-    const progress=document.querySelector('#loading-progress'),detail=document.querySelector('#loading-detail');
-    const persist=runtimeMode.offlineEnabled&&'caches'in globalThis;
-    const prepared=await prepareAssets({required:assets.required,optional:assets.optional,cacheName:release.cacheName,persist,onProgress:item=>{progress.value=item.percent;detail.textContent=`${persist?'必須素材を準備中':'最新素材を確認中'}… ${item.completed}/${item.total}`}});
-    if(persist)await cleanupStaleCaches(caches,release.cacheName);
-    if(!prepared.ready){showAssetFailure(renderer,prepared,bootstrap);return}
-    routes=null;
-    try{
-      const loadedRoutes=await fetchJson('./data/routes-primary.geojson');
-      assertValid(validateRoutes(loadedRoutes),'route data');routes=loadedRoutes;
-    }catch(error){console.warn('Route display unavailable',error);renderer.announce('ルートの線を表示できません。目的地点と文字案内を確認してください。')}
     const profile=await loadTestProfile();savedResult=profile?{status:'test',state:profile}:store.load(release);
     if(['corrupt','incompatible'].includes(savedResult.status)){offerFreshStart(savedResult.status==='corrupt'?'保存データが破損しています。削除せず保持しています。':'公開版との互換性を確認できません。旧状態は削除せず保持しています。');return}
-    if(savedResult.state){state=savedResult.state;updateStatusButton();showPreparation(renderer,{hasSaved:true,onContinue:renderState,onNew:()=>renderer.showDialog({title:'新しく始めますか？',body:'<p>この端末の進行状態だけを初期化します。</p>',confirmText:'新しく始める',cancelText:'続きに戻る',danger:true,transitionSound:true,onConfirm:()=>{store.reset(true);state=createInitialState(release.releaseId);renderState()}})});return}
-    state=createInitialState(release.releaseId);updateStatusButton();showPreparation(renderer,{onReady:()=>runTransition({type:'acknowledge-safety'})});
+    state=savedResult.state??createInitialState(release.releaseId);
+    updateStatusButton();renderPreparation({hasSaved:Boolean(savedResult.state)});
   }catch(error){console.error(error);showFatal(renderer,'ゲームを起動できません',error.message,()=>location.reload())}
 }
 

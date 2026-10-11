@@ -31,9 +31,16 @@ export function showDevicePickup(renderer,{onPickup,onTap}){
   target.addEventListener('click',()=>{target.disabled=true;onTap?.();section.classList.add('is-picking-up');renderer.announce('端末を拾いました');const delay=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches?80:900;setTimeout(()=>onPickup(),delay)},{once:true});
 }
 
-export function showPreparation(renderer,{hasSaved=false,onContinue,onNew,onReady}){
-  renderer.render(`<section class="card hero"><p class="eyebrow">FIELD TERMINAL / 00</p><h1>宇宙からの<br>漂流者</h1><p class="lead">ご参加いただきありがとうございます。本サイトは約20分の歩行と謎解きを含む、30〜40分程度の屋外体験です。</p>${hasSaved?`<div class="actions inline">${button('continue-game','続きから')}${button('new-game','新しく始める','secondary')}</div>`:`<ul class="checklist"><li><label><input type="checkbox">画面をつけたまま進み、歩行中は画面を注視しません</label></li><li><label><input type="checkbox">両耳を塞がず、周囲の音が聞こえる音量にします</label></li><li><label><input type="checkbox">謎や地図の操作は、安全な場所で立ち止まって行います</label></li><li><label><input type="checkbox">位置情報は到着判定中だけ使い、座標や履歴を保存・送信しないことを確認しました</label></li></ul><div class="actions">${button('prepare-ready','準備して通信を開く')}</div>`}</section>`);
+export function showPreparation(renderer,{hasSaved=false,downloadBytes=0,onContinue,onNew,onReady}){
+  const size=Number.isFinite(downloadBytes)&&downloadBytes>0?`約${Math.ceil(downloadBytes/1000000)}MB`:'音声・画像などの素材';
+  const notice=`<p class="objective"><strong>ダウンロードについて：</strong>${hasSaved?'「続きから」':'「準備して通信を開く」'}を押すと、${size}をダウンロードします。通信量にご注意ください。保存済みの素材がある場合は、実際のダウンロード量が少なくなることがあります。</p>`;
+  renderer.render(`<section class="card hero"><p class="eyebrow">FIELD TERMINAL / 00</p><h1>宇宙からの<br>漂流者</h1><img class="preparation-key-visual" src="./assets/images/key-visual.png" alt="宇宙からの漂流者 キービジュアル" width="512" height="362"><p class="lead">ご参加いただきありがとうございます。本サイトは約20分の歩行と謎解きを含む、30〜40分程度の屋外体験です。<br><br>＊途中、位置情報の取得許可を求められたら許可してください。</p>${notice}${hasSaved?`<div class="actions inline">${button('continue-game','続きから')}${button('new-game','新しく始める','secondary')}</div>`:`<ul class="checklist"><li><label><input type="checkbox">画面をつけたまま進み、歩行中は画面を注視しません</label></li><li><label><input type="checkbox">両耳を塞がず、周囲の音が聞こえる音量にします</label></li><li><label><input type="checkbox">謎や地図の操作は、安全な場所で立ち止まって行います</label></li><li><label><input type="checkbox">位置情報は到着判定中だけ使い、座標や履歴を保存・送信しないことを確認しました</label></li></ul><div class="actions">${button('prepare-ready','準備して通信を開く')}</div>`}</section>`);
   if(hasSaved){document.querySelector('#continue-game').addEventListener('click',onContinue);document.querySelector('#new-game').addEventListener('click',onNew)}else{const checks=[...document.querySelectorAll('.checklist input')],ready=document.querySelector('#prepare-ready');ready.disabled=true;checks.forEach(check=>check.addEventListener('change',()=>ready.disabled=!checks.every(item=>item.checked)));ready.addEventListener('click',onReady)}
+}
+
+export function showAssetDownload(renderer){
+  renderer.render(`<section class="loading-screen" aria-labelledby="loading-title"><div class="orbit-loader" aria-hidden="true"><span></span></div><p class="eyebrow">DOWNLOADING</p><h1 id="loading-title">通信の素材をダウンロード中</h1><p id="loading-detail">音声・画像を準備しています…</p><progress id="loading-progress" max="100" value="0">0%</progress></section>`);
+  renderer.screen.setAttribute('aria-busy','true');
 }
 
 export function showIncomingCall(renderer,{ringAvailable=false,ringFailed=false,onAnswer,onRingReplay}){

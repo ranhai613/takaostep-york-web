@@ -25,7 +25,8 @@ export function validateReleaseConfig(release, { production = false } = {}) {
 export function validateAssetManifest(assets) {
   const errors = [];
   if (!object(assets)) return ['assets must be an object'];
-  errors.push(...unknownKeys(assets, ['schemaVersion','releaseId','required','optional'], 'assets'));
+  errors.push(...unknownKeys(assets, ['schemaVersion','releaseId','required','optional','downloadBytes'], 'assets'));
+  if(assets.downloadBytes!==undefined&&(!Number.isSafeInteger(assets.downloadBytes)||assets.downloadBytes<0))errors.push('assets.downloadBytes must be a nonnegative byte count');
   if (!Number.isInteger(assets.schemaVersion) || assets.schemaVersion < 1) errors.push('assets.schemaVersion must be a positive integer');
   if (!present(assets.releaseId)) errors.push('assets.releaseId is required');
   for (const key of ['required','optional']) if (!unique(assets[key]) || !assets[key].every(present) || (key === 'required' && assets[key].length === 0)) errors.push(`assets.${key} must be a unique path list`);

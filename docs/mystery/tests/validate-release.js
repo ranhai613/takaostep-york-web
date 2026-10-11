@@ -16,6 +16,8 @@ assertValid(validateRoutes(await json('data/routes-primary.geojson')),'route dat
 assert.equal(release.initialStateProfile,'normal');
 assert.ok(assets.required.every(path=>!/^https?:/i.test(path)),'required assets must not use a CDN');
 for(const path of assets.required)await access(resolve(root,path.replace(/^\.\//,'')));
+const downloadBytes=(await Promise.all([...new Set([...assets.required,...assets.optional])].map(async path=>(await stat(resolve(root,path.replace(/^\.\//,'')))).size))).reduce((sum,size)=>sum+size,0);
+assert.ok(assets.downloadBytes>=downloadBytes&&assets.downloadBytes-downloadBytes<1000000,'asset manifest downloadBytes must round the current total size up to the next MB');
 const state=createInitialState(release.releaseId);
 const started=performance.now();
 let sample=state;for(let index=0;index<1000;index++){sample=reducePlayerState(sample,{type:'audio-progress',audioId:'benchmark',seconds:index});distanceMeters({lat:35.63,lng:139.27},{lat:35.64,lng:139.28})}
