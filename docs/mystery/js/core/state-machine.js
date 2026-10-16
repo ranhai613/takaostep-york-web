@@ -21,7 +21,7 @@ export function transition(state, event, now) {
       requireCondition(state.completedEventIds.includes('intro-completed'), 'introduction is required');
       if (index > 1) requireCondition(state.solvedPuzzleIds.includes(`q${index - 1}`), `q${index - 1} must be solved`);
       next = reducePlayerState(next, { type:'arrive', spotId:event.spotId, eventId:`spot-${index}-arrived` }, now);
-      if (index === 4) next = reducePlayerState(next, { type:'collect-part', partId:'part-i' }, now);
+      if (index === 4) next = reducePlayerState(next, { type:'collect-part', partId:'part-m' }, now);
       return reducePlayerState(next, { type:'navigate', sceneId:index === 4 ? 's08' : 's05', chapterId:index === 3 ? 'chapter-ten' : index === 4 ? 'chapter-ketsu' : 'chapter-sho' }, now);
     }
     case 'view-hint': {
@@ -44,7 +44,7 @@ export function transition(state, event, now) {
     }
     case 'authenticate-final':
       requireCondition(['q1','q2','q3'].every(id => state.solvedPuzzleIds.includes(id)), 'q1-q3 must be solved');
-      requireCondition(['part-r','part-a','part-m','part-i'].every(id => state.collectedPartIds.includes(id)), 'all parts are required');
+      requireCondition(['part-a','part-i','part-r','part-m'].every(id => state.collectedPartIds.includes(id)), 'all parts are required');
       requireCondition(state.q4Order.join('') === 'MIRA', 'MIRA order is required');
       next = reducePlayerState(next, { type:'solve', puzzleId:'q4', eventId:'q4-solved' }, now);
       return reducePlayerState(next, { type:'navigate', sceneId:'s09', chapterId:'chapter-ketsu' }, now);

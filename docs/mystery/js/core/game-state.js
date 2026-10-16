@@ -10,7 +10,7 @@ export function createInitialState(releaseId, now = () => new Date().toISOString
     currentSceneId: 's00',
     chapterId: 'chapter-ki',
     completedEventIds: [], reachedSpotIds: [], solvedPuzzleIds: [], viewedHintIds: [], collectedPartIds: [], listenedAudioIds: [],
-    audioProgress: {}, q4Order: ['R','A','M','I'], endingSeen: false, updatedAt: stamp(now)
+    audioProgress: {}, q4Order: ['A','I','R','M'], endingSeen: false, updatedAt: stamp(now)
   };
   assertValid(validatePlayerState(state), 'initial state');
   return state;

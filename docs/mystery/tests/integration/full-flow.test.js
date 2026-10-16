@@ -9,7 +9,7 @@ test('subtitle and manual-arrival path completes the entire game without privile
   state=transition(state,{type:'complete-intro',audioMode:'subtitles'});
   for(let index=1;index<=3;index++){
     state=transition(state,{type:'arrive',spotId:`spot-${index}`,source:'player-confirmation'});
-    state=transition(state,{type:'solve',puzzleId:`q${index}`,correct:true,partId:['part-r','part-a','part-m'][index-1]});
+    state=transition(state,{type:'solve',puzzleId:`q${index}`,correct:true,partId:['part-a','part-i','part-r'][index-1]});
     state=transition(state,{type:'advance-after-part'});
   }
   state=transition(state,{type:'arrive',spotId:'spot-4',source:'player-confirmation'});
@@ -21,6 +21,6 @@ test('subtitle and manual-arrival path completes the entire game without privile
   state=transition(state,{type:'complete-ending'});
   assert.equal(state.endingSeen,true);
   assert.equal(state.currentSceneId,'completed');
-  assert.deepEqual(state.collectedPartIds,['part-r','part-a','part-m','part-i']);
+  assert.deepEqual(state.collectedPartIds,['part-a','part-i','part-r','part-m']);
   assert.equal(Object.keys(state).some(key=>/coord|answer|analytics/i.test(key)),false);
 });

@@ -20,7 +20,7 @@ test('every development destination is a valid, selectable player state',()=>{
 
 test('field destinations have the expected prerequisite and reward flags',()=>{
   for(let index=1;index<=3;index++){
-    const priorParts=['part-r','part-a','part-m'].slice(0,index-1);
+    const priorParts=['part-a','part-i','part-r'].slice(0,index-1);
     const briefing=at(`briefing-${index}`);
     assert.deepEqual(briefing.reachedSpotIds,Array.from({length:index},(_,n)=>`spot-${n+1}`));
     assert.deepEqual(briefing.solvedPuzzleIds,Array.from({length:index-1},(_,n)=>`q${n+1}`));
@@ -31,7 +31,7 @@ test('field destinations have the expected prerequisite and reward flags',()=>{
     assert.ok(puzzle.listenedAudioIds.includes(`audio-main-${index}`));
     const part=at(`part-${index}`);
     assert.ok(part.solvedPuzzleIds.includes(`q${index}`));
-    assert.deepEqual(part.collectedPartIds,[...priorParts,['part-r','part-a','part-m'][index-1]]);
+    assert.deepEqual(part.collectedPartIds,[...priorParts,['part-a','part-i','part-r'][index-1]]);
     assert.ok(!part.completedEventIds.includes(`q${index}-continued`));
     assert.equal(transition(part,{type:'advance-after-part'}).currentSceneId,'s04');
     assert.ok(at(`travel-${index+1}`).completedEventIds.includes(`q${index}-continued`));
@@ -41,8 +41,8 @@ test('field destinations have the expected prerequisite and reward flags',()=>{
 test('final destinations preserve authentication, repair and completion order',()=>{
   const final=at('final'),repair=at('repair'),ending=at('ending'),completed=at('completed');
   assert.deepEqual(final.reachedSpotIds,['spot-1','spot-2','spot-3','spot-4']);
-  assert.deepEqual(final.collectedPartIds,['part-r','part-a','part-m','part-i']);
-  assert.equal(final.q4Order.join(''),'RAMI');
+  assert.deepEqual(final.collectedPartIds,['part-a','part-i','part-r','part-m']);
+  assert.equal(final.q4Order.join(''),'AIRM');
   assert.ok(!final.solvedPuzzleIds.includes('q4'));
   assert.equal(repair.q4Order.join(''),'MIRA');
   assert.ok(repair.solvedPuzzleIds.includes('q4'));

@@ -42,7 +42,7 @@ export function buildDebugState(releaseId,stageId,now){
   capture('intro');
   state=transition(state,{type:'complete-intro'},now);
   capture('travel-1');
-  const partIds=['part-r','part-a','part-m'];
+  const partIds=['part-a','part-i','part-r'];
   for(let index=1;index<=3;index++){
     state=transition(state,{type:'arrive',spotId:`spot-${index}`},now);
     capture(`briefing-${index}`);

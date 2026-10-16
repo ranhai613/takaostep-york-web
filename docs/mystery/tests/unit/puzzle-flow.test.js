@@ -12,8 +12,8 @@ test('wrong answer does not lock and hints remain ordered and persisted', () => 
   assert.equal(h3.viewedHintIds.length,3);
 });
 test('solving grants a part once and opens only the next route', () => {
-  const solved=transition(atQ1(),{type:'solve',puzzleId:'q1',correct:true,partId:'part-r'});
-  const again=transition(solved,{type:'solve',puzzleId:'q1',correct:true,partId:'part-r'});
-  assert.deepEqual(again.collectedPartIds,['part-r']); assert.equal(again.currentSceneId,'s07');
+  const solved=transition(atQ1(),{type:'solve',puzzleId:'q1',correct:true,partId:'part-a'});
+  const again=transition(solved,{type:'solve',puzzleId:'q1',correct:true,partId:'part-a'});
+  assert.deepEqual(again.collectedPartIds,['part-a']); assert.equal(again.currentSceneId,'s07');
   assert.equal(transition(again,{type:'advance-after-part'}).currentSceneId,'s04');
 });
