@@ -20,6 +20,17 @@ python -m http.server 4173
 
 HTTPSまたはlocalhost以外では位置情報とService Workerが利用できない場合があります。
 
+## Google Analytics（GA4）
+
+謎画面の表示を `puzzle_view` イベントとして記録します。イベントの独自パラメータは `puzzle_id`（`q1`〜`q4`）だけです。測定IDは初期状態では空欄で、`data/release-config.json` の `googleAnalyticsMeasurementId` に `G-...` を設定すると計測を開始します。このイベントから位置情報、回答、プレイヤー状態は送信しません。Google Analyticsを有効にする前に、外部計測を利用することをプライバシー案内に記載してください。
+
+設定手順：
+
+1. Google AnalyticsでGA4プロパティと本番サイト用のウェブデータストリームを作り、測定IDを取得します。[GA4の設定手順](https://support.google.com/analytics/answer/14183469?hl=ja)
+2. 測定IDを `data/release-config.json` に設定して公開し、リアルタイムレポートまたはDebugViewで `puzzle_view` を確認します。
+3. 謎ごとの集計には、GA4の「カスタム定義」で `puzzle_id` をイベントスコープのカスタムディメンションとして登録します。
+4. 謎画面のアクセス数だけを計測する場合は、拡張計測機能のページビュー（ブラウザ履歴の変更を含む）を無効にします。このアプリはタグの初回 `page_view` を止めていますが、拡張計測機能は画面遷移時に別途ページビューを記録できます。[ページビュー計測](https://developers.google.com/analytics/devguides/collection/ga4/views?technology=websites)・[拡張計測機能の設定](https://support.google.com/analytics/answer/9216061?hl=ja)
+
 ## BGM
 
 `assets/audio/bgm/` のMP3をループ再生します。着信〜Q1クリアは `ki`、Q2への移動〜Q2クリアは `shou`、Q3への移動〜Q3クリアは `ten`、Q4への移動〜認証は `ketsu`、認証成功後のクリア画面とエンディングは `ed` です。同じパート内では再生位置を保ち、次のパートへ進むと約0.3秒のフェードアウトと約0.3秒のフェードインで切り替えます。

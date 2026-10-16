@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
   "releaseId": "mira-poc-2026-10-r4",
+  "googleAnalyticsMeasurementId": "G-S6BQ75L4W5",
   "contentVersion": "1.0.0-draft",
   "routeMode": "primary",
   "initialStateProfile": "normal",

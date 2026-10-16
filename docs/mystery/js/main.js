@@ -13,6 +13,7 @@ import { prepareAssets, cleanupStaleCaches } from './services/asset-preloader.js
 import { cleanupDevelopmentOfflineState, clearDevelopmentReloadGuard } from './services/offline-control.js';
 import { AudioQueue } from './services/audio-queue.js';
 import { BgmPlayer } from './services/bgm-player.js';
+import { createAnalytics } from './services/analytics.js';
 import { LocationWatcher } from './services/location.js';
 import { Renderer, escapeHtml, formatPartProgress } from './ui/renderer.js';
 import { MapView } from './ui/map-view.js';
@@ -31,6 +32,7 @@ let selectedLetter=null;
 let incomingRingAudio=null;
 let incomingRingFailed=false;
 let callStartedAt=0;
+let analytics;
 let assetsReady=false;
 let preparingAssets=false;
 let downloadStarted=false;
@@ -223,12 +225,14 @@ function renderPuzzleScreen(){
     return;
   }
   const signalClip=puzzle.signalAudioSrc?{id:`audio-${puzzle.id}-signal`,kind:'system',src:puzzle.signalAudioSrc,subtitle:'',priority:0,transient:true}:null;
+  analytics?.trackPuzzleView(puzzle.id);
   showPuzzle(renderer,{puzzle,hintCount:hintCount(puzzle),inventory:inventory(),onPlaySignal:()=>{if(signalClip)handleAudio('priority-play',[signalClip])},onSubmit:(answer,feedback)=>{if(!isAcceptedAnswer(answer,puzzle.acceptedAnswers,puzzle.normalizationRules)){feedback.className='feedback error';feedback.textContent='認証できませんでした。入力を見直すか、ヒントを確認してください。';return}runTransition({type:'solve',puzzleId:puzzle.id,correct:true,partId:puzzle.partId})},onHint:()=>{const index=hintCount(puzzle);return runTransition({type:'view-hint',puzzleId:puzzle.id,hintIndex:index},{render:false})?index:null},onZoom:()=>renderer.showDialog({title:'問題画像',body:`<img class="puzzle-image" src="${escapeHtml(puzzle.image)}" alt="${escapeHtml(puzzle.altText)}"><p>${escapeHtml(puzzle.altText)}</p>`,confirmText:'閉じる',cancelText:''})});
 }
 
 function renderFinal(){
   const puzzle=content.puzzles.find(item=>item.id==='q4');
   const finalConnection=content.audioClips.find(clip=>clip.id==='audio-final-connection');
+  analytics?.trackPuzzleView(puzzle.id);
   showFinal(renderer,{
     puzzle,parts:content.parts,subtitle:finalConnection?.subtitle??'',order:state.q4Order,selected:selectedLetter,inventory:inventory(),hintCount:hintCount(puzzle),
     onSelect:index=>{
@@ -296,6 +300,7 @@ async function bootstrap(){
       if(cleanup.errors.length){showDevelopmentCleanupFailure(renderer,cleanup,()=>{clearDevelopmentReloadGuard();location.reload()});return}
     }
     [release]=await Promise.all([fetchJson('./data/release-config.json')]);
+    analytics=createAnalytics({measurementId:release.googleAnalyticsMeasurementId??''});
     [assets,content]=await Promise.all([fetchJson(release.assetManifestPath),fetchJson(release.contentPath)]);
     if(release.routeMode==='alternate'){
       const alternate=await fetchJson('./data/route-alternate.json');
